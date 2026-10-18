@@ -24,7 +24,7 @@ export async function applyAction(db: Db, action: Action, actor = "ai"): Promise
         source,
         priority_confirmed: source === "coordinatore",
       };
-      const rows = action.date
+      const rows: (typeof base & { weekday: number | null; date: string | null })[] = action.date
         ? [{ ...base, date: action.date, weekday: null }]
         : action.weekdays.map((weekday) => ({ ...base, weekday, date: null }));
       must(await db.from("student_constraints").insert(rows), "inserimento vincolo");

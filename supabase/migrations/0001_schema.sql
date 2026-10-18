@@ -371,4 +371,4 @@ begin
 end $$;
 
 -- Aggiornamenti in tempo reale per la dashboard chat.
-alter publication supabase_realtime add table chats, messages, pending_actions;
+alter publication supabase_realtime add table chats, messages, pending_actions, planning_runs, lessons;

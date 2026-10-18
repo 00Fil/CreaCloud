@@ -295,7 +295,7 @@ def test_group_suggestion_for_same_topic():
     sol = solve(p)
     (g,) = sol.group_suggestions
     assert set(g.request_ids) == {"ra", "rb"}
-    assert "Anna" in g.note and "Bruno" in g.note
+    assert set(g.student_ids) == {"a", "b"} and "fasce" in g.note
 
 
 def test_realistic_scale_80_students_10_tutors():

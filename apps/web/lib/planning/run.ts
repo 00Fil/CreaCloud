@@ -71,10 +71,15 @@ export async function callEngine(problem: EngineProblem): Promise<EngineSolution
   return (await res.json()) as EngineSolution;
 }
 
-/** Crea una bozza di piano per il mese. Non tocca il calendario finché non viene confermata. */
-export async function createPlanningRun(db: Db, month: DateStr, staffId: string | null): Promise<string> {
+/**
+ * Crea una bozza di piano per il mese e restituisce il suo id. Il calcolo
+ * (fino a qualche minuto) va lanciato con `solvePlanningRun`, di solito in
+ * background: la pagina mostra la bozza "in calcolo" finché non arriva la soluzione.
+ * Il calendario non cambia finché la bozza non viene confermata.
+ */
+export async function startPlanningRun(db: Db, month: DateStr, staffId: string | null): Promise<string> {
   const data = await loadPlanningData(db, month);
-  const problem = buildProblem(data, month, todayRome());
+  const problem = buildProblem(data, month, todayRome(), Number(process.env.PLANNING_TIME_LIMIT_S) || 120);
   const run = must(
     await db
       .from("planning_runs")
@@ -83,13 +88,17 @@ export async function createPlanningRun(db: Db, month: DateStr, staffId: string 
       .single(),
     "piano",
   ) as { id: string };
-  try {
-    const solution = await callEngine(problem);
-    must(await db.from("planning_runs").update({ solution }).eq("id", run.id), "salvataggio piano");
-  } catch (e) {
-    await db.from("planning_runs").update({ status: "errore", error: String(e).slice(0, 1000) }).eq("id", run.id);
-  }
   return run.id;
+}
+
+export async function solvePlanningRun(db: Db, runId: string): Promise<void> {
+  const run = must(await db.from("planning_runs").select("problem").eq("id", runId).single(), "piano") as { problem: EngineProblem };
+  try {
+    const solution = await callEngine(run.problem);
+    must(await db.from("planning_runs").update({ solution }).eq("id", runId), "salvataggio piano");
+  } catch (e) {
+    await db.from("planning_runs").update({ status: "errore", error: String(e).slice(0, 1000) }).eq("id", runId);
+  }
 }
 
 /**

@@ -40,7 +40,7 @@ export async function ensureChat(db: Db, phone: string, name: string) {
     .single();
   if (created.error) {
     // creata in parallelo da un altro webhook
-    const again = must(await db.from("chats").select("*").eq("phone", phone).single(), "chat");
+    const again = must(await db.from("chats").select("*").eq("phone", phone).single(), "chat") as unknown;
     return again as { id: string; display_name: string; unread_count: number };
   }
   return created.data as { id: string; display_name: string; unread_count: number };

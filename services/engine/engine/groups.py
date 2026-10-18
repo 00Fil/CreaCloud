@@ -55,8 +55,6 @@ def suggest_groups(ctx: "Context") -> list[GroupSuggestion]:
             if len(group) < 2:
                 continue
             tutors = sorted({t for _, _, t in common})
-            names = ", ".join(ctx.students[r.student_ids[0]].name or r.student_ids[0] for r in group)
-            what = f"{subject}" + (f" ({topic})" if topic else "")
             out.append(
                 GroupSuggestion(
                     request_ids=[r.id for r in group],
@@ -66,7 +64,7 @@ def suggest_groups(ctx: "Context") -> list[GroupSuggestion]:
                     topic=topic or None,
                     tutor_ids=tutors,
                     common_slots=len(common),
-                    note=f"{names} studiano {what} e hanno {len(common)} fasce in comune: valuta una lezione di gruppo.",
+                    note=f"{len(common)} fasce orarie in comune: valuta una lezione di gruppo.",
                 )
             )
     return out

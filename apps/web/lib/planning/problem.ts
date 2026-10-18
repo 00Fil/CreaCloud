@@ -8,6 +8,7 @@
  */
 
 import type { LessonStatus } from "@/lib/domain/cancellation";
+import { tutorCoversLevel } from "@/lib/domain/levels";
 import { monthEnd, monthStart, weekdayOf, type DateStr } from "@/lib/domain/time";
 
 import type { EngineConstraint, EngineProblem, EngineRequest } from "./engine-types";
@@ -117,7 +118,7 @@ export function buildProblem(data: PlanningData, month: DateStr, today: DateStr,
     const tutorIds = tutors
       .filter((t) =>
         data.tutorSubjects.some(
-          (ts) => ts.tutor_id === t.id && ts.subject_id === r.subject_id && (!ts.levels.length || levels.every((lv) => ts.levels.includes(lv))),
+          (ts) => ts.tutor_id === t.id && ts.subject_id === r.subject_id && levels.every((lv) => tutorCoversLevel(ts.levels, lv)),
         ),
       )
       .map((t) => t.id);

@@ -214,7 +214,7 @@ function disponibilita(input: DecideInput): Decision {
   if (input.speaker.kind !== "tutor") return { reply: HOLD, attention: true };
   const d = input.interp.disponibilita;
   if (!d || !d.fasce.length) return ask("In quali giorni e orari sei disponibile?");
-  const windows = [];
+  const windows: { weekday: number; startMin: number; endMin: number }[] = [];
   for (const f of d.fasce) {
     const s = resolveTime(f.dalle);
     const e = resolveTime(f.alle);

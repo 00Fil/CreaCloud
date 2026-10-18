@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { accrual, familyStatement, formatEuro, tutorStatement, type BillingLesson, type Rates } from "./billing";
 import { classifyCancellation, hoursBefore } from "./cancellation";
+import { levelBand, tutorCoversLevel } from "./levels";
 import { addDays, monthEnd, nextWeekday, romeParts, romeToInstant, weekdayOf } from "./time";
 
 const rates: Rates = {
@@ -104,5 +105,23 @@ describe("billing", () => {
 
   it("formats euro", () => {
     expect(formatEuro(123456).replace(/\s/g, " ")).toBe("1.234,56 €");
+  });
+});
+
+describe("livelli scolastici", () => {
+  it("riconosce la fascia dalla classe scritta a mano", () => {
+    expect(levelBand("4 elementare")).toBe("elementari");
+    expect(levelBand("2 media")).toBe("medie");
+    expect(levelBand("3 liceo scientifico")).toBe("superiori");
+    expect(levelBand("4 istituto tecnico")).toBe("superiori");
+    expect(levelBand("boh")).toBeNull();
+  });
+
+  it("abbina il tutor allo studente per fascia o per testo", () => {
+    expect(tutorCoversLevel(["superiori"], "3 liceo scientifico")).toBe(true);
+    expect(tutorCoversLevel(["elementari", "medie"], "3 liceo scientifico")).toBe(false);
+    expect(tutorCoversLevel(["liceo"], "5 liceo classico")).toBe(true);
+    expect(tutorCoversLevel([], "2 media")).toBe(true);
+    expect(tutorCoversLevel(["medie"], "")).toBe(true);
   });
 });
