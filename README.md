@@ -28,7 +28,9 @@ apps/web                  dashboard Next.js, webhook WhatsApp, assistente AI
 services/engine           motore di pianificazione (Python, FastAPI, OR-Tools)
 services/whatsapp-gateway collegamento al numero attuale (Baileys, non ufficiale)
 supabase                  schema del database e dati di esempio
-deploy                    docker compose + Caddy per un server unico
+docker-compose.yml        servizi applicativi, usato da Dokploy
+deploy                    Caddy per un server senza Dokploy
+docs                      guida a Dokploy
 ```
 
 I due canali WhatsApp, il **numero attuale** (tramite gateway) e la **Cloud API ufficiale**, si scambiano da *Impostazioni*. Le risposte partono sempre dal canale da cui la persona ha scritto.
@@ -67,10 +69,10 @@ Test: `pytest` in `services/engine`, `npm test` in `apps/web`, `npm run build &&
    insert into staff (id, full_name, role)
    select id, 'Nome Cognome', 'titolare' from auth.users where email = 'tua@email.it';
    ```
-3. **Server.** Su una VPS in UE con Docker:
+3. **Server.** Il modo consigliato è [Dokploy](docs/dokploy.md): scarica il repository da GitHub, avvia i servizi, gestisce HTTPS e rifà il deploy a ogni push. In alternativa, su una VPS in UE con solo Docker:
    ```bash
-   cd deploy && cp ../.env.example .env   # compila tutti i valori
-   docker compose up -d --build
+   cp .env.example .env   # compila tutti i valori
+   docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
    ```
    Caddy ottiene il certificato HTTPS per `DOMAIN`.
 4. **Collegare il numero attuale.** Apri *Impostazioni* e inquadra il QR dal telefono (*WhatsApp → Dispositivi collegati*). Il telefono continua a funzionare normalmente.
