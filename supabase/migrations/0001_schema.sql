@@ -298,6 +298,7 @@ create table messages (
   author text not null check (author in ('utente', 'ai', 'coordinatore', 'telefono', 'sistema')),
   body text not null default '',
   media_type text,
+  media_ref text,
   transcript text,
   provider text not null,
   provider_message_id text,

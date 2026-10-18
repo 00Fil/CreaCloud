@@ -109,6 +109,10 @@ export const InterpretationSchema = z.object({
     .object({ nuova_data: DateRefSchema.nullable(), nuovo_orario: hhmm, nota: z.string() })
     .nullable(),
   annullamento: z.object({ motivo: z.string() }).nullable(),
+  trascrizione: z
+    .string()
+    .nullable()
+    .describe("solo per messaggi vocali: trascrizione fedele in italiano, altrimenti null"),
   risposta: z
     .string()
     .describe("risposta breve e cordiale in italiano; non inventare mai orari, date, importi o promesse"),

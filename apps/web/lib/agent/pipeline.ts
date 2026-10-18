@@ -61,7 +61,16 @@ export async function handleInbound(deps: AgentDeps, chatId: string, messageId: 
     return send(deps, chat, UNKNOWN_REPLY, draft, null);
   }
 
-  const text = (message.transcript ?? message.body).trim();
+  const recent = await repo.recentMessages(chat.id, 14);
+  // più messaggi di fila dell'utente vengono letti insieme
+  const burst: Message[] = [];
+  for (let i = recent.length - 1; i >= 0 && recent[i].direction === "in"; i--) burst.unshift(recent[i]);
+  if (!burst.some((m) => m.id === message.id)) burst.splice(0, burst.length, message);
+  const text = burst
+    .slice(-5)
+    .map((m) => (m.transcript ?? m.body).trim())
+    .filter(Boolean)
+    .join("\n");
   const state: ChatState = { ...chat.state };
   if (state.pending && new Date(state.pending.expiresAt) < now) delete state.pending;
 
@@ -73,7 +82,7 @@ export async function handleInbound(deps: AgentDeps, chatId: string, messageId: 
 
   const studentIds =
     speaker.kind === "genitore" ? speaker.students.map((s) => s.id) : speaker.kind === "studente" ? [speaker.student.id] : [];
-  const [lessons, constraints, subjects, recent] = await Promise.all([
+  const [lessons, constraints, subjects] = await Promise.all([
     repo.lessons({
       studentIds: studentIds.length ? studentIds : undefined,
       tutorId: speaker.kind === "tutor" ? speaker.tutor.id : undefined,
@@ -82,8 +91,8 @@ export async function handleInbound(deps: AgentDeps, chatId: string, messageId: 
     }),
     studentIds.length ? repo.constraints(studentIds) : Promise.resolve([]),
     repo.subjects(),
-    repo.recentMessages(chat.id, 9),
   ]);
+  const burstIds = new Set(burst.map((m) => m.id));
   const ctx = buildContext({
     speaker,
     today,
@@ -91,7 +100,7 @@ export async function handleInbound(deps: AgentDeps, chatId: string, messageId: 
     lessons,
     constraints,
     subjects,
-    transcript: recent.filter((m) => m.id !== message.id).slice(-8),
+    transcript: recent.filter((m) => !burstIds.has(m.id)).slice(-8),
     state,
   });
 
@@ -114,6 +123,8 @@ export async function handleInbound(deps: AgentDeps, chatId: string, messageId: 
     await repo.updateChat(chat.id, { needs_attention: true });
     return send(deps, chat, "Scusami, non sono riuscito a capire bene. Ho avvisato il coordinatore che ti risponderà a breve.", draft, null);
   }
+
+  if (audio && interp.trascrizione) await repo.updateMessage(message.id, { transcript: interp.trascrizione });
 
   const decision = decide({
     interp,

@@ -65,9 +65,10 @@ export class MemoryRepo implements AgentRepo {
     });
     return mid;
   }
-  async updateMessage(messageId: string, patch: { status?: string }) {
+  async updateMessage(messageId: string, patch: { status?: string; transcript?: string }) {
     const m = this.messages.find((x) => x.id === messageId);
     if (m && patch.status) m.status = patch.status;
+    if (m && patch.transcript) m.transcript = patch.transcript;
   }
   async speaker(chat: Chat): Promise<Speaker> {
     if (chat.parent_id) {

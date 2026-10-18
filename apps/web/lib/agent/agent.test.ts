@@ -27,6 +27,7 @@ function interp(over: Partial<Interpretation>): Interpretation {
     modifica_lezioni: null,
     spostamento: null,
     annullamento: null,
+    trascrizione: null,
     risposta: "",
     ...over,
   };

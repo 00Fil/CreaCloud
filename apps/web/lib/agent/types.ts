@@ -25,6 +25,7 @@ export interface Message {
   author: MessageAuthor;
   body: string;
   media_type: string | null;
+  media_ref?: string | null;
   transcript: string | null;
   created_at: string;
 }
@@ -197,7 +198,10 @@ export interface AgentRepo {
     providerMessageId?: string | null;
     status: string;
   }): Promise<string>;
-  updateMessage(id: string, patch: { status?: string; providerMessageId?: string | null; error?: string | null }): Promise<void>;
+  updateMessage(
+    id: string,
+    patch: { status?: string; providerMessageId?: string | null; error?: string | null; transcript?: string },
+  ): Promise<void>;
   speaker(chat: Chat): Promise<Speaker>;
   lessons(filter: { studentIds?: string[]; tutorId?: string; from: DateStr; to: DateStr }): Promise<LessonInfo[]>;
   constraints(studentIds: string[]): Promise<ConstraintInfo[]>;
@@ -211,5 +215,9 @@ export interface AgentRepo {
 
 export interface OutboundChannel {
   readonly provider: string;
-  send(phone: string, text: string, opts?: { lastInboundAt?: string | null }): Promise<{ providerMessageId: string | null }>;
+  send(
+    phone: string,
+    text: string,
+    opts?: { lastInboundAt?: string | null; manual?: boolean },
+  ): Promise<{ providerMessageId: string | null }>;
 }
