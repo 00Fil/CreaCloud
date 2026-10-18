@@ -1,4 +1,4 @@
-# Servizi applicativi: dashboard web, motore di pianificazione e gateway WhatsApp.
+# Servizi applicativi: dashboard web, motore di pianificazione e Waxum self-hosted.
 # Il database è Supabase (progetto gestito in regione UE), quindi qui non c'è.
 #
 # Dokploy: crea un servizio "Compose" che punta a questo file (Compose Path ./docker-compose.yml),
@@ -6,7 +6,7 @@
 # Guida completa: docs/dokploy.md. Per un server senza Dokploy: deploy/docker-compose.yml.
 #
 # Nessun servizio pubblica porte sull'host: HTTPS e dominio li gestisce il proxy davanti
-# (Traefik in Dokploy, Caddy in deploy/). Motore e gateway restano raggiungibili solo dalla rete interna.
+# (Traefik in Dokploy, Caddy in deploy/). Motore e Waxum restano raggiungibili solo dalla rete interna.
 
 services:
   web:
@@ -21,7 +21,11 @@ services:
         required: false
     environment:
       ENGINE_URL: http://engine:8000
-      WA_GATEWAY_URL: http://gateway:3001
+      WAXUM_URL: ${WAXUM_URL:-http://waxum:3451}
+      WAXUM_TOKEN: ${WAXUM_TOKEN:?manca WAXUM_TOKEN}
+      WAXUM_SESSION_ID: ${WAXUM_SESSION_ID:-creacloud}
+      WAXUM_WEBHOOK_SECRET: ${WAXUM_WEBHOOK_SECRET:?manca WAXUM_WEBHOOK_SECRET}
+      WAXUM_WEBHOOK_URL: ${WAXUM_WEBHOOK_URL:?manca WAXUM_WEBHOOK_URL}
     expose: ["3000"]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
@@ -47,23 +51,28 @@ services:
       retries: 3
     restart: unless-stopped
 
-  gateway:
-    build: ./services/whatsapp-gateway
+  waxum:
+    # Immagine ufficiale upstream, versione verificata. Nessuna porta pubblica.
+    image: ${WAXUM_IMAGE:-fdciabdul/waxum:0.16.0}
     environment:
-      WA_GATEWAY_TOKEN: ${WA_GATEWAY_TOKEN:?manca WA_GATEWAY_TOKEN}
-      WEB_INBOUND_URL: http://web:3000/api/whatsapp/gateway
-      ALLOW_FIRST_CONTACT: ${ALLOW_FIRST_CONTACT:-false}
-    expose: ["3001"]
-    # sessione di WhatsApp Web: se si perde, va inquadrato di nuovo il QR
+      SUPERADMIN_TOKEN: ${WAXUM_TOKEN:?manca WAXUM_TOKEN}
+      JWT_SECRET: ${WAXUM_JWT_SECRET:?manca WAXUM_JWT_SECRET}
+      WHATSAPP_STORAGE_PATH: /app/whatsapp_sessions
+      SQLITE_PATH: /app/whatsapp_sessions/waxum.db
+      PORT: "3451"
+      RUST_LOG: waxum=info,tower_http=info
+      WEBHOOK_RETRY_MAX_ATTEMPTS: "5"
+      WEBHOOK_RETRY_ON_4XX: "true"
+    expose: ["3451"]
     volumes:
-      - wa-auth:/data
+      - waxum-data:/app/whatsapp_sessions
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      test: ["CMD", "/app/waxum", "--healthcheck"]
       interval: 30s
       timeout: 5s
-      start_period: 15s
+      start_period: 30s
       retries: 3
     restart: unless-stopped
 
 volumes:
-  wa-auth:
+  waxum-data:

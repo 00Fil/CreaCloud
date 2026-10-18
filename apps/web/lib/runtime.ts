@@ -10,19 +10,14 @@ import { OpenAICompatibleProvider } from "@/lib/ai/openai-compatible";
 import { serviceClient } from "@/lib/db/clients";
 import { loadSettings, SupabaseRepo } from "@/lib/db/repo";
 import type { Db } from "@/lib/db/util";
-import { CloudChannel, cloudConfigFromEnv } from "@/lib/whatsapp/cloud";
-import { GatewayChannel, gatewayConfigFromEnv } from "@/lib/whatsapp/gateway";
+import { WaxumChannel, waxumConfigFromEnv } from "@/lib/whatsapp/waxum";
 import type { WhatsAppProvider } from "@/lib/whatsapp/types";
 
-export function channelFor(provider: WhatsAppProvider): CloudChannel | GatewayChannel {
-  if (provider === "cloud") {
-    const cfg = cloudConfigFromEnv();
-    if (!cfg) throw new Error("Cloud API non configurata (WA_CLOUD_*)");
-    return new CloudChannel(cfg);
-  }
-  const cfg = gatewayConfigFromEnv();
-  if (!cfg) throw new Error("gateway non configurato (WA_GATEWAY_URL, WA_GATEWAY_TOKEN)");
-  return new GatewayChannel(cfg);
+/** Anche le chat storiche passano ora attraverso la sessione Waxum configurata. */
+export function channelFor(_provider: WhatsAppProvider = "waxum"): WaxumChannel {
+  const cfg = waxumConfigFromEnv();
+  if (!cfg) throw new Error("Waxum non configurato (WAXUM_URL, WAXUM_TOKEN, WAXUM_SESSION_ID)");
+  return new WaxumChannel(cfg);
 }
 
 export async function activeChannel(db: Db): Promise<OutboundChannel> {
@@ -64,7 +59,9 @@ export async function agentDeps(replyVia?: WhatsAppProvider): Promise<AgentDeps>
       const ref = m.media_ref;
       if (!ref) return null;
       const row = await db.from("messages").select("provider").eq("id", m.id).single();
-      const ch = channelFor((row.data?.provider ?? "baileys") as WhatsAppProvider);
+      // I vecchi riferimenti Baileys/Meta non sono scaricabili da Waxum.
+      if (row.data?.provider !== "waxum") return null;
+      const ch = channelFor("waxum");
       return ch.downloadMedia(ref);
     },
   };

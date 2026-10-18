@@ -1,0 +1,7 @@
+# Richiede Docker Compose >= 2.24.4 (tag !reset).
+# docker compose -f docker-compose.yml -f deploy/docker-compose.external-waxum.yml up -d --build
+# WAXUM_URL=https://waxum.example.org; WAXUM_TOKEN deve autorizzare la sessione.
+services:
+  waxum:
+    profiles: ["local-waxum"]
+    environment: !reset {}

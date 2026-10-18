@@ -6,10 +6,10 @@ import {
   addClosure,
   addRoom,
   addSubject,
-  gatewayLogout,
+  waxumConnect,
+  waxumLogout,
   removeSetting,
   saveGeneral,
-  setProvider,
   toggleRoom,
 } from "@/app/(app)/actions/settings";
 import { AutoRefresh } from "@/components/auto-refresh";
@@ -20,23 +20,27 @@ import { sessionClient } from "@/lib/db/clients";
 import { loadSettings } from "@/lib/db/repo";
 import { formatEuro } from "@/lib/domain/billing";
 import { hhmm, monthStart, romeToInstant, shortDate, todayRome, WEEKDAYS, WEEKDAYS_SHORT } from "@/lib/domain/time";
-import { cloudConfigFromEnv } from "@/lib/whatsapp/cloud";
-import { GatewayChannel, gatewayConfigFromEnv } from "@/lib/whatsapp/gateway";
+import { WaxumChannel, waxumConfigFromEnv } from "@/lib/whatsapp/waxum";
 
-const GATEWAY_STATE: Record<string, [string, "ok" | "warn" | "danger" | "neutral"]> = {
-  connesso: ["collegato", "ok"],
-  da_collegare: ["da collegare: inquadra il QR", "warn"],
-  avvio: ["in avvio", "neutral"],
-  disconnesso: ["disconnesso, riprovo", "warn"],
-  irraggiungibile: ["servizio non raggiungibile", "danger"],
+const WAXUM_STATE: Record<string, [string, "ok" | "warn" | "danger" | "neutral"]> = {
+  logged_in: ["collegato", "ok"],
+  waiting_for_qr: ["inquadra il QR", "warn"],
+  waiting_for_pair_code: ["in attesa del codice di abbinamento", "warn"],
+  connecting: ["connessione in corso", "neutral"],
+  connected: ["socket connesso, autenticazione in corso", "neutral"],
+  disconnected: ["scollegato: premi Collega", "warn"],
+  paused: ["sessione in pausa", "warn"],
+  socket_offline: ["login salvato, socket offline: ricollega", "warn"],
+  missing: ["sessione da creare", "warn"],
+  unauthorized: ["token Waxum non valido o permessi insufficienti", "danger"],
+  unreachable: ["Waxum non raggiungibile", "danger"],
 };
 
 export default async function SettingsPage() {
   const db = await sessionClient();
   const today = todayRome();
-  const gatewayCfg = gatewayConfigFromEnv();
-  const cloudReady = Boolean(cloudConfigFromEnv());
-  const [settings, rates, { data: hours }, { data: closures }, { data: rooms }, { data: subjects }, { data: aiRows }, gateway] = await Promise.all([
+  const waxumCfg = waxumConfigFromEnv();
+  const [settings, rates, { data: hours }, { data: closures }, { data: rooms }, { data: subjects }, { data: aiRows }, waxum] = await Promise.all([
     loadSettings(db),
     loadRates(db),
     db.from("center_hours").select("*").order("weekday").order("start_min"),
@@ -44,70 +48,52 @@ export default async function SettingsPage() {
     db.from("rooms").select("*").order("name"),
     db.from("subjects").select("id, name").order("name"),
     db.from("ai_events").select("cost_micro_usd, tier").gte("created_at", romeToInstant(monthStart(today), 0).toISOString()),
-    gatewayCfg ? new GatewayChannel(gatewayCfg).status() : Promise.resolve(null),
+    waxumCfg ? new WaxumChannel(waxumCfg).status() : Promise.resolve(null),
   ]);
   const spent = microUsdToEur((aiRows ?? []).reduce((a, r) => a + Number(r.cost_micro_usd), 0));
   const calls = (aiRows ?? []).length;
-  const [gwLabel, gwTone] = GATEWAY_STATE[gateway?.state ?? "irraggiungibile"] ?? [gateway?.state ?? "", "neutral"];
-  const provider = settings.whatsappProvider;
+  const [waLabel, waTone] = WAXUM_STATE[waxum?.state ?? "unreachable"] ?? [waxum?.state ?? "", "neutral"];
   const euro = (cents: number) => String(cents / 100).replace(".", ",");
 
   return (
     <>
-      {gateway && gateway.state !== "connesso" && <AutoRefresh seconds={5} />}
+      {waxum && ["connecting", "connected", "waiting_for_qr", "waiting_for_pair_code"].includes(waxum.state) && <AutoRefresh seconds={5} />}
       <PageHeader eyebrow="Configurazione" title="Impostazioni" />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Canale WhatsApp" subtitle="I due sistemi sono alternabili in qualsiasi momento" />
+          <CardHeader title="WhatsApp · Waxum" subtitle="API self-hosted, sessione dedicata a CreaCloud" />
           <div className="flex flex-col gap-4 p-5 text-sm">
-            <form action={setProvider} className="grid gap-2 sm:grid-cols-2">
-              {(
-                [
-                  ["baileys", "Numero attuale (non ufficiale)", "Collegato come WhatsApp Web: il telefono resta utilizzabile."],
-                  ["cloud", "Cloud API ufficiale (Meta)", cloudReady ? "Configurata. Per la produzione." : "Non configurata: mancano le variabili WA_CLOUD_*."],
-                ] as const
-              ).map(([value, title, hint]) => (
-                <button
-                  key={value}
-                  name="provider"
-                  value={value}
-                  disabled={value === "cloud" && !cloudReady}
-                  className={cn(
-                    "rounded-2xl border p-4 text-left transition disabled:opacity-50",
-                    provider === value ? "border-pervinca bg-pervinca/10" : "hover:bg-ink/[0.03]",
-                  )}
-                >
-                  <p className="font-semibold">
-                    {title} {provider === value && <Badge tone="pervinca">attivo</Badge>}
-                  </p>
-                  <p className="mt-1 text-xs text-muted">{hint}</p>
-                </button>
-              ))}
-            </form>
-            <p className="text-xs text-muted">
-              Le risposte partono sempre dal canale da cui la persona ha scritto. Il canale attivo vale per i nuovi messaggi in uscita.
-            </p>
-
+            <p>Invii manuali, risposte AI e messaggi dal telefono usano la sessione Waxum configurata sul server.</p>
             <div className="rounded-2xl border p-4">
               <p className="flex items-center gap-2 font-semibold">
-                Numero attuale {gatewayCfg ? <Badge tone={gwTone}>{gwLabel}</Badge> : <Badge tone="warn">gateway non configurato</Badge>}
+                Numero del centro {waxumCfg ? <Badge tone={waTone}>{waLabel}</Badge> : <Badge tone="warn">Waxum non configurato</Badge>}
               </p>
-              {gateway?.me && <p className="mt-1 text-xs text-muted">Collegato come {gateway.me}</p>}
-              {gateway?.qr && (
+              {waxumCfg && <p className="mt-1 text-xs text-muted">Sessione: {waxumCfg.sessionId}</p>}
+              {waxum?.me && <p className="mt-1 text-xs text-muted">Collegato come {waxum.me}</p>}
+              {waxum?.qr && (
                 <div className="mt-3 flex flex-col items-center gap-2">
-                  <img src={gateway.qr} alt="QR per collegare WhatsApp" className="size-56 rounded-xl bg-white p-2" />
+                  <img src={waxum.qr} alt="QR per collegare WhatsApp a Waxum" className="size-56 rounded-xl bg-white p-2" />
                   <p className="text-center text-xs text-muted">Sul telefono: WhatsApp → Dispositivi collegati → Collega un dispositivo.</p>
                 </div>
               )}
-              {gateway?.state === "connesso" && (
-                <form action={gatewayLogout} className="mt-3">
-                  <Button size="sm" variant="ghost">Scollega questo numero</Button>
-                </form>
+              {waxumCfg && (
+                <div className="mt-3 flex gap-2">
+                  <form action={waxumConnect}>
+                    <Button size="sm" variant="primary">Collega / riconfigura webhook</Button>
+                  </form>
+                  {waxum?.state === "logged_in" && <form action={waxumLogout}>
+                    <Button size="sm" variant="ghost">Scollega questo numero</Button>
+                  </form>}
+                </div>
               )}
               <p className="mt-3 text-xs text-muted">
-                Canale non ufficiale: Meta può limitare o bloccare il numero se rileva un uso automatico. L&apos;assistente risponde solo a chi scrive per primo e con
-                ritmi umani, ma il rischio non è zero.
+                Scollega rimuove il dispositivo collegato, ma conserva sessione e webhook. Per un nuovo QR premi Collega.
+                Non eliminare la sessione Waxum. I gruppi e gli aggiornamenti di stato non attivano l&apos;assistente.
+              </p>
+              <p className="mt-3 text-xs text-muted">
+                Collegamento non ufficiale: il self-hosting non elimina il rischio di limitazioni da WhatsApp.
+                L&apos;AI non avvia nuovi contatti salvo esplicita configurazione; il coordinatore può inviare manualmente.
               </p>
             </div>
           </div>

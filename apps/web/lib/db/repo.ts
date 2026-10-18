@@ -21,7 +21,7 @@ export async function loadSettings(db: Db): Promise<Settings & Record<string, un
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   return {
     ...map,
-    whatsappProvider: map.whatsapp_provider === "cloud" ? "cloud" : "baileys",
+    whatsappProvider: "waxum",
     cancellationHours: Number(map.cancellation_hours ?? 24),
     aiMonthlyBudgetEur: Number(map.ai_monthly_budget_eur ?? 14),
     aiEnabled: map.ai_enabled !== false,

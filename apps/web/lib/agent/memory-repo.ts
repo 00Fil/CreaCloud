@@ -33,7 +33,7 @@ export class MemoryRepo implements AgentRepo {
   pendingActions: PendingActionInput[] = [];
   applied: Action[] = [];
   phones = new Map<string, { parentId?: string; studentId?: string; tutorId?: string }>();
-  settingsValue: Settings = { whatsappProvider: "baileys", cancellationHours: 24, aiMonthlyBudgetEur: 14, aiEnabled: true };
+  settingsValue: Settings = { whatsappProvider: "waxum", cancellationHours: 24, aiMonthlyBudgetEur: 14, aiEnabled: true };
   spentMicroUsd = 0;
 
   async getChat(chatId: string) {
