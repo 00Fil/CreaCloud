@@ -53,7 +53,7 @@ npm run dev
 
 Apri http://localhost:3000 e accedi con `demo@creattivamente.local`, password `creattivamente` (solo dati di esempio).
 
-Test: `pytest` in `services/engine`, `npm test` in `apps/web`, `npm run build && npm test` in `services/whatsapp-gateway`.
+Test: `supabase test db` per i permessi del database, `pytest` in `services/engine`, `npm test` in `apps/web`, `npm run build && npm test` in `services/whatsapp-gateway`.
 
 ## Messa in produzione
 
@@ -61,7 +61,7 @@ Test: `pytest` in `services/engine`, `npm test` in `apps/web`, `npm run build &&
    ```bash
    supabase link --project-ref <ref> && supabase db push
    ```
-   Il file `seed.sql` non va applicato in produzione.
+   Il file `seed.sql` non va applicato in produzione. In *Authentication → Sign In / Providers* disattiva **Allow new users to sign up**: gli accessi li crea solo il titolare.
 2. **Primo coordinatore.** In Supabase, sotto *Authentication → Users*, crea l'utente con email e password. Poi, nell'editor SQL:
    ```sql
    insert into staff (id, full_name, role)
@@ -75,6 +75,12 @@ Test: `pytest` in `services/engine`, `npm test` in `apps/web`, `npm run build &&
    Caddy ottiene il certificato HTTPS per `DOMAIN`.
 4. **Collegare il numero attuale.** Apri *Impostazioni* e inquadra il QR dal telefono (*WhatsApp → Dispositivi collegati*). Il telefono continua a funzionare normalmente.
 5. **Cloud API (facoltativa).** Configura il webhook dell'app Meta su `https://DOMAIN/api/whatsapp/cloud` con il token `WA_CLOUD_VERIFY_TOKEN`. Per scrivere a chi non ha scritto nelle ultime 24 ore serve un modello approvato (`WA_TEMPLATE_NAME`).
+
+### Sicurezza
+
+- Ogni tabella ha Row Level Security: anonimi e utenti registrati che non fanno parte dello staff non vedono né modificano nulla. Il titolare gestisce lo staff, i coordinatori no. Il registro delle operazioni non si può modificare né cancellare. I test in `supabase/tests` lo verificano a ogni modifica.
+- La chiave `SUPABASE_SERVICE_ROLE_KEY` resta solo sul server: la usano webhook, assistente e motore, mai il browser.
+- Il webhook della Cloud API verifica la firma di Meta; gateway e motore accettano solo richieste con il loro token e non sono esposti su internet nel `docker-compose`.
 
 ### Costi AI
 

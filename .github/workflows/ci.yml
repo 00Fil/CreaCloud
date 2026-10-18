@@ -71,3 +71,5 @@ jobs:
           version: 2.121.0
       # applica migrazioni e dati di esempio su un Postgres Supabase reale
       - run: supabase start -x studio,mailpit,imgproxy,storage-api,edge-runtime,logflare,vector,supavisor,postgres-meta,realtime
+      # permessi: anonimi, estranei e coordinatori vedono e modificano solo ciò che devono
+      - run: supabase test db
