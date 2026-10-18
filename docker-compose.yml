@@ -73,6 +73,10 @@ services:
       start_period: 30s
       retries: 3
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - creacloud-wa-interno-xhuhoh
 
 volumes:
   waxum-data:
