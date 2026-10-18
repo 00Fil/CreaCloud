@@ -1,0 +1,9 @@
+{
+  "name": "Creattivamente – Coordinamento",
+  "short_name": "Creattivamente",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9f8f6",
+  "theme_color": "#8c9bbe",
+  "icons": [{ "src": "/logo.png", "sizes": "768x768", "type": "image/png" }]
+}

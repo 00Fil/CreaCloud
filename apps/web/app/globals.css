@@ -1,0 +1,123 @@
+/*
+ * Design system Creattivamente (trasposto dal sito base):
+ * Fraunces per i titoli, Manrope per l'interfaccia, carta calda come sfondo,
+ * pervinca come colore primario, pesca come secondario, forme morbide a pillola.
+ */
+@import "tailwindcss";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource-variable/manrope";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces Variable", ui-serif, Georgia, serif;
+
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-pervinca: #8c9bbe;
+  --color-pervinca-strong: #7a86b6;
+  --color-pesca: #d99a85;
+  --color-pesca-strong: #d98a6c;
+  --color-pesca-deep: #c27558;
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-3xl: 1.5rem;
+
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.04), 0 4px 24px -8px rgb(41 37 36 / 0.08);
+}
+
+:root {
+  --paper: #f9f8f6;
+  --surface: #ffffff;
+  --surface-2: #f5f5f4;
+  --ink: #292524;
+  --ink-soft: #57534e;
+  --muted: #8a867d;
+  --line: #e7e5e4;
+  --ok: #15803d;
+  --warn: #b45309;
+  --danger: #e11d48;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --paper: #0a0a09;
+    --surface: #121212;
+    --surface-2: #1c1b1a;
+    --ink: #e7e5e4;
+    --ink-soft: #a8a29e;
+    --muted: #78716c;
+    --line: #27272a;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --danger: #fb7185;
+    color-scheme: dark;
+  }
+}
+
+.dark {
+  --paper: #0a0a09;
+  --surface: #121212;
+  --surface-2: #1c1b1a;
+  --ink: #e7e5e4;
+  --ink-soft: #a8a29e;
+  --muted: #78716c;
+  --line: #27272a;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --danger: #fb7185;
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+  html,
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  :focus-visible {
+    outline: 3px solid rgb(140 155 190 / 0.45);
+    outline-offset: 2px;
+  }
+}
+
+@utility label-caps {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+@utility thin-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(41 37 36 / 0.15) transparent;
+}
+
+.chat-wallpaper {
+  background-color: var(--surface-2);
+  background-image: radial-gradient(rgb(140 155 190 / 0.12) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
