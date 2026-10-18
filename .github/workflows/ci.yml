@@ -46,22 +46,6 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci
 
-  gateway:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: services/whatsapp-gateway
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: services/whatsapp-gateway/package-lock.json
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
-
   compose:
     runs-on: ubuntu-latest
     steps:

@@ -6,7 +6,7 @@ import { requireStaff } from "@/lib/auth/staff";
 import { audit } from "@/lib/db/actions";
 import { sessionClient } from "@/lib/db/clients";
 import { parseHhmm } from "@/lib/domain/time";
-import { GatewayChannel, gatewayConfigFromEnv } from "@/lib/whatsapp/gateway";
+import { WaxumChannel, waxumConfigFromEnv } from "@/lib/whatsapp/waxum";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const euroCents = (v: string) => Math.round(Number(v.replace(",", ".")) * 100);
@@ -23,13 +23,6 @@ async function put(key: string, value: unknown) {
   await audit(db, staff.userId, "impostazione", "settings", null, { key, value });
 }
 
-export async function setProvider(fd: FormData) {
-  const provider = str(fd, "provider");
-  if (provider !== "baileys" && provider !== "cloud") return;
-  await put("whatsapp_provider", provider);
-  revalidatePath("/impostazioni");
-}
-
 export async function saveGeneral(fd: FormData) {
   const hours = Number(str(fd, "cancellation_hours"));
   if (Number.isFinite(hours) && hours >= 0) await put("cancellation_hours", hours);
@@ -43,10 +36,19 @@ export async function saveGeneral(fd: FormData) {
   revalidatePath("/impostazioni");
 }
 
-export async function gatewayLogout() {
+export async function waxumConnect() {
   await requireStaff();
-  const cfg = gatewayConfigFromEnv();
-  if (cfg) await new GatewayChannel(cfg).logout().catch(() => undefined);
+  const cfg = waxumConfigFromEnv();
+  if (!cfg) throw new Error("Waxum non configurato");
+  await new WaxumChannel(cfg).connect();
+  revalidatePath("/impostazioni");
+}
+
+export async function waxumLogout() {
+  await requireStaff();
+  const cfg = waxumConfigFromEnv();
+  if (!cfg) throw new Error("Waxum non configurato");
+  await new WaxumChannel(cfg).logout();
   revalidatePath("/impostazioni");
 }
 
