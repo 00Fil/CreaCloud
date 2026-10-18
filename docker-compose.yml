@@ -1,0 +1,69 @@
+# Servizi applicativi: dashboard web, motore di pianificazione e gateway WhatsApp.
+# Il database è Supabase (progetto gestito in regione UE), quindi qui non c'è.
+#
+# Dokploy: crea un servizio "Compose" che punta a questo file (Compose Path ./docker-compose.yml),
+# incolla le variabili nella scheda Environment e aggiungi il dominio sul servizio `web`, porta 3000.
+# Guida completa: docs/dokploy.md. Per un server senza Dokploy: deploy/docker-compose.yml.
+#
+# Nessun servizio pubblica porte sull'host: HTTPS e dominio li gestisce il proxy davanti
+# (Traefik in Dokploy, Caddy in deploy/). Motore e gateway restano raggiungibili solo dalla rete interna.
+
+services:
+  web:
+    build:
+      context: ./apps/web
+      args:
+        # finiscono nel codice del browser, quindi servono già in fase di build
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?manca NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?manca NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ENGINE_URL: http://engine:8000
+      WA_GATEWAY_URL: http://gateway:3001
+    expose: ["3000"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  engine:
+    build: ./services/engine
+    environment:
+      ENGINE_TOKEN: ${ENGINE_TOKEN:?manca ENGINE_TOKEN}
+    expose: ["8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+  gateway:
+    build: ./services/whatsapp-gateway
+    environment:
+      WA_GATEWAY_TOKEN: ${WA_GATEWAY_TOKEN:?manca WA_GATEWAY_TOKEN}
+      WEB_INBOUND_URL: http://web:3000/api/whatsapp/gateway
+      ALLOW_FIRST_CONTACT: ${ALLOW_FIRST_CONTACT:-false}
+    expose: ["3001"]
+    # sessione di WhatsApp Web: se si perde, va inquadrato di nuovo il QR
+    volumes:
+      - wa-auth:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3001/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  wa-auth:
