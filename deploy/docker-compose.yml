@@ -1,0 +1,50 @@
+# Server unico (es. VPS in UE): piattaforma web, motore, gateway WhatsApp e Caddy per HTTPS.
+# Il database è Supabase (progetto in regione UE). Uso:
+#   cp ../.env.example .env   # e compila i valori
+#   docker compose up -d --build
+name: creacloud
+
+services:
+  web:
+    build:
+      context: ../apps/web
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file: .env
+    environment:
+      ENGINE_URL: http://engine:8000
+      WA_GATEWAY_URL: http://gateway:3001
+    restart: unless-stopped
+    depends_on: [engine]
+
+  engine:
+    build: ../services/engine
+    environment:
+      ENGINE_TOKEN: ${ENGINE_TOKEN}
+    restart: unless-stopped
+
+  gateway:
+    build: ../services/whatsapp-gateway
+    environment:
+      WA_GATEWAY_TOKEN: ${WA_GATEWAY_TOKEN}
+      WEB_INBOUND_URL: http://web:3000/api/whatsapp/gateway
+      ALLOW_FIRST_CONTACT: ${ALLOW_FIRST_CONTACT:-false}
+    volumes:
+      - wa-auth:/data
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    restart: unless-stopped
+    depends_on: [web]
+
+volumes:
+  wa-auth:
+  caddy-data:
