@@ -8,6 +8,7 @@ Convenzioni:
 
 from __future__ import annotations
 
+import datetime as dt
 from datetime import date
 from enum import Enum
 from typing import Literal, Optional
@@ -214,7 +215,7 @@ class Occurrence(BaseModel):
 class Unplaced(BaseModel):
     request_id: str
     session_index: Optional[int] = None
-    date: Optional[date] = None
+    date: Optional[dt.date] = None
     student_ids: list[str]
     subject_id: str
     reasons: list[str]

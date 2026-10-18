@@ -137,6 +137,21 @@ def test_holiday_lesson_is_relocated_in_same_week():
     assert [v.constraint_id for v in moved.violations] == ["gio"]
 
 
+def test_relocation_failure_is_reported_with_date():
+    holiday = date(2026, 10, 12)  # lunedì, unico giorno disponibile
+    p = problem(
+        center=center(closed_dates=[holiday]),
+        tutors=[tutor("rossi", days=[0])],
+        students=[Student(id="luca")],
+        requests=[LessonRequest(id="r1", student_ids=["luca"], subject_id="mat")],
+    )
+    sol = solve(p)
+    (u,) = sol.unplaced
+    assert u.date == holiday
+    assert "centro è chiuso" in u.reasons[0]
+    assert len(sol.occurrences) == 3
+
+
 def test_unplaced_explains_busy_tutor():
     p = problem(
         center=Center(hours=[TimeWindow(weekday=0, start=15 * H, end=16 * H)]),

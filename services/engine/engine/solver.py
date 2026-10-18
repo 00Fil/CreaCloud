@@ -227,6 +227,64 @@ def _build_items(model: cp_model.CpModel, items: list[Item], prefix: str) -> Non
 # ------------------------------------------------------------------ fase A
 
 
+def _greedy(ctx: Context, items: list[Item]) -> dict[int, int]:
+    """Soluzione iniziale veloce: le sessioni più importanti e più vincolate per
+    prime, ognuna nella collocazione libera più economica. Serve come punto di
+    partenza per CP-SAT e come rete di sicurezza se il tempo finisce."""
+    occ = Occupancy(ctx.slot)
+    student_day: Counter = Counter()
+    request_days: dict[str, set[int]] = defaultdict(set)
+    chosen: dict[int, int] = {}
+    order = sorted(
+        (n for n, it in enumerate(items) if it.cands),
+        key=lambda n: (-ctx.placement_reward(items[n].req), len(items[n].cands), items[n].req.id, items[n].index),
+    )
+    for n in order:
+        it = items[n]
+        best, best_cost = None, None
+        for i, c in enumerate(it.cands):
+            if blocking_reasons(ctx, it.req, c, c.weekday, occ, weekly=True):
+                continue
+            if any(
+                ctx.students[sid].max_lessons_per_day is not None
+                and student_day[(sid, c.weekday)] >= ctx.students[sid].max_lessons_per_day
+                for sid in it.req.student_ids
+                if sid in ctx.students
+            ):
+                continue
+            cost = c.cost + (ctx.w.same_day_same_request if c.weekday in request_days[it.req.id] else 0)
+            if occ.tutor_day_minutes[(c.tutor_id, c.weekday)] == 0:
+                cost += ctx.w.tutor_day
+            if best_cost is None or cost < best_cost:
+                best, best_cost = i, cost
+        if best is None:
+            continue
+        c = it.cands[best]
+        chosen[n] = best
+        occ.add(c.weekday, c, it.req.student_ids, ctx.cells(c.start, c.end))
+        for sid in it.req.student_ids:
+            student_day[(sid, c.weekday)] += 1
+        request_days[it.req.id].add(c.weekday)
+
+    # sessioni equivalenti della stessa richiesta: in ordine di giorno/ora, senza buchi
+    by_req: dict[str, list[int]] = defaultdict(list)
+    for n, it in enumerate(items):
+        by_req[it.req.id].append(n)
+    for rid, ns in by_req.items():
+        if items[ns[0]].req.existing:
+            continue
+        picks = sorted(
+            (items[n].cands[chosen[n]] for n in ns if n in chosen),
+            key=lambda c: c.weekday * 1440 + c.start,
+        )
+        index = {id(c): i for i, c in enumerate(items[ns[0]].cands)}
+        for n in ns:
+            chosen.pop(n, None)
+        for n, c in zip(ns, picks):
+            chosen[n] = index[id(c)]
+    return chosen
+
+
 def _phase_a(ctx: Context, deadline: float) -> tuple[list[Item], str, Optional[float]]:
     model = cp_model.CpModel()
     items: list[Item] = []
@@ -267,8 +325,28 @@ def _phase_a(ctx: Context, deadline: float) -> tuple[list[Item], str, Optional[f
 
     active = [it for it in items if it.placed is not None]
     penalties, _ = _add_resource_constraints(ctx, model, active, lambda c: c.weekday, None, weekly=True)
+
+    greedy = _greedy(ctx, items)
+    for n, it in enumerate(items):
+        if it.placed is None:
+            continue
+        pick = greedy.get(n)
+        model.AddHint(it.placed, pick is not None)
+        for i, x in enumerate(it.xs):
+            model.AddHint(x, i == pick)
+
     solver, status = _solve(ctx, model, active, penalties, max(1.0, deadline - time.monotonic()))
     objective = solver.ObjectiveValue() if status in (cp_model.OPTIMAL, cp_model.FEASIBLE) else None
+
+    def placed_value(pick) -> int:
+        return sum(ctx.placement_reward(it.req) for it in items if pick(it))
+
+    solved = placed_value(lambda it: it.chosen is not None) if objective is not None else -1
+    fallback = sum(ctx.placement_reward(items[n].req) for n in greedy)
+    if solved < fallback:
+        for n, it in enumerate(items):
+            it.chosen = it.cands[greedy[n]] if n in greedy else None
+        return items, "GREEDY", None
     return items, solver.StatusName(status), objective
 
 
