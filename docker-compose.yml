@@ -26,6 +26,7 @@ services:
       WAXUM_SESSION_ID: ${WAXUM_SESSION_ID:-creacloud}
       WAXUM_WEBHOOK_SECRET: ${WAXUM_WEBHOOK_SECRET:?manca WAXUM_WEBHOOK_SECRET}
       WAXUM_WEBHOOK_URL: ${WAXUM_WEBHOOK_URL:?manca WAXUM_WEBHOOK_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?manca SUPABASE_SERVICE_ROLE_KEY}
     expose: ["3000"]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
