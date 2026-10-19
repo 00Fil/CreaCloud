@@ -3,12 +3,12 @@ import { Card } from "./ui";
 
 export function QuickStart() {
   return (
-    <Card className="mb-6 px-5 py-1">
-      <details>
-        <summary className="text-sm font-semibold text-ink-soft">
+    <Card className="mb-6 px-5 py-4">
+      <div>
+        <h2 className="text-lg">
           Da dove comincio? Tre passaggi per organizzare le lezioni
-        </summary>
-        <ol className="ux-reveal grid list-inside list-decimal gap-4 pb-4 pt-2 text-sm sm:grid-cols-3">
+        </h2>
+        <ol className="grid list-inside list-decimal gap-4 pt-3 text-sm sm:grid-cols-3">
           <li>
             <Link
               href="/persone"
@@ -46,7 +46,7 @@ export function QuickStart() {
             </p>
           </li>
         </ol>
-      </details>
+      </div>
     </Card>
   );
 }

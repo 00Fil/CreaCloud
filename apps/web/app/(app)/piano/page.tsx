@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   CalendarCheck,
+  Check,
   Clock,
   Send,
   Sparkles,
@@ -15,6 +16,9 @@ import {
   sendSchedules,
   startPlan,
 } from "@/app/(app)/actions/planning";
+import { Sheet } from "@/components/kit/sheet";
+import { SheetForm } from "@/components/kit/sheet-form";
+import { Tabs } from "@/components/kit/tabs";
 import { LiveRefresh } from "@/components/live-refresh";
 import {
   Badge,
@@ -23,6 +27,7 @@ import {
   CardHeader,
   cn,
   Empty,
+  Field,
   PageHeader,
   PriorityBadge,
   Select,
@@ -49,6 +54,7 @@ import type {
 
 type Search = {
   run?: string;
+  tab?: string;
   confermato?: string;
   inviati?: string;
   errori?: string;
@@ -90,6 +96,66 @@ export default async function PlanPage({
     : { data: null };
   const computing = run?.status === "bozza" && !run.solution && !run.error;
 
+  const step =
+    !run || run.status === "scartato" || run.status === "errore"
+      ? 0
+      : computing
+        ? 0
+        : run.status === "bozza"
+          ? 1
+          : 3;
+  const STEPS = [
+    ["Calcola", "il motore prepara una bozza"],
+    ["Rivedi", "problemi, variazioni e gruppi"],
+    ["Conferma", "scrive le lezioni nel calendario"],
+    ["Invia", "orari via WhatsApp"],
+  ];
+
+  const sendSheet = (
+    <Sheet
+      variant={step === 3 ? "primary" : "outline"}
+      trigger={
+        <>
+          <Send aria-hidden="true" /> Invia gli orari
+        </>
+      }
+      title="Invia gli orari"
+      description="Un messaggio WhatsApp con le lezioni future del calendario confermato."
+    >
+      <form action={sendSchedules} className="flex flex-col gap-5">
+        <Field label="Mese">
+          <Select name="month" defaultValue={run?.month ?? thisMonth}>
+            {months.map((m) => (
+              <option key={m} value={m}>
+                {monthLabel(m)}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Destinatari">
+          <Select name="target" defaultValue="tutti">
+            <option value="tutti">Famiglie e tutor</option>
+            <option value="famiglie">Solo famiglie</option>
+            <option value="tutor">Solo tutor</option>
+          </Select>
+        </Field>
+        <p className="rounded-xl bg-surface-2 p-3 text-sm text-ink-soft">
+          Parte solo quando premi. Ogni famiglia e ogni tutor riceve le proprie
+          lezioni future del mese scelto.
+        </p>
+        <div>
+          <Button
+            variant="primary"
+            confirmMessage="Verranno inviati messaggi WhatsApp ai destinatari selezionati, con le lezioni future del calendario confermato per il mese scelto. Controlla mese e destinatari prima di continuare."
+            confirmLabel="Invia gli orari"
+          >
+            <Send /> Invia gli orari
+          </Button>
+        </div>
+      </form>
+    </Sheet>
+  );
+
   return (
     <>
       <LiveRefresh tables={["planning_runs"]} />
@@ -97,34 +163,75 @@ export default async function PlanPage({
         eyebrow="Motore di pianificazione"
         title="Piano mensile"
         action={
-          <form action={startPlan} className="flex flex-wrap gap-2">
-            <Select
-              name="month"
-              aria-label="Mese da pianificare"
-              defaultValue={months[1]}
-              className="w-auto"
-            >
-              {months.map((m) => (
-                <option key={m} value={m}>
-                  {monthLabel(m)}
-                </option>
-              ))}
-            </Select>
-            <Button variant="primary">
-              <Sparkles /> Calcola bozza
-            </Button>
-          </form>
+          <>
+            <form action={startPlan} className="flex flex-wrap gap-2">
+              <Select
+                name="month"
+                aria-label="Mese da pianificare"
+                defaultValue={months[1]}
+                className="w-auto"
+              >
+                {months.map((m) => (
+                  <option key={m} value={m}>
+                    {monthLabel(m)}
+                  </option>
+                ))}
+              </Select>
+              <Button variant={step === 0 ? "primary" : "outline"}>
+                <Sparkles /> Calcola bozza
+              </Button>
+            </form>
+            {sendSheet}
+          </>
         }
       >
-        Il motore colloca le lezioni ricorrenti rispettando disponibilità dei
-        tutor, impegni degli studenti e postazioni. Le lezioni bloccate o
-        spostate a mano restano dove sono. Il calendario cambia solo quando
-        confermi.
+        Le lezioni bloccate o spostate a mano restano dove sono. Il calendario
+        cambia solo quando confermi, e nessun messaggio parte da solo.
       </PageHeader>
+
+      <ol
+        aria-label="Passaggi"
+        className="mb-6 grid grid-cols-2 gap-2 sm:grid-cols-4"
+      >
+        {STEPS.map(([title, hint], i) => {
+          const done = i < step || (i === 2 && step === 3);
+          const current = i === step;
+          return (
+            <li
+              key={title}
+              aria-current={current ? "step" : undefined}
+              className={cn(
+                "flex items-center gap-3 rounded-2xl border px-3 py-2.5",
+                current ? "border-pervinca bg-pervinca/10" : "bg-surface",
+              )}
+            >
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold",
+                  done
+                    ? "bg-ok/15 text-ok"
+                    : current
+                      ? "bg-pervinca text-[#292524]"
+                      : "bg-ink/5 text-muted",
+                )}
+              >
+                {done ? <Check aria-label="fatto" className="size-4" /> : i + 1}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{title}</span>
+                <span className="block truncate text-xs text-muted">
+                  {hint}
+                </span>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
 
       {sp.confermato && (
         <Notice tone="ok">
-          Piano confermato: {sp.confermato} lezioni scritte nel calendario.
+          Piano confermato: {sp.confermato} lezioni scritte nel calendario. Ora
+          puoi inviare gli orari.
         </Notice>
       )}
       {sp.inviati && (
@@ -137,126 +244,87 @@ export default async function PlanPage({
         </Notice>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_300px]">
-        <div className="flex min-w-0 flex-col gap-6">
-          {!run && (
-            <Card>
-              <Empty>
-                Nessun piano ancora. Scegli il mese e calcola la prima bozza.
-              </Empty>
-            </Card>
-          )}
-          {run && computing && (
-            <Card className="flex items-center gap-4 p-6">
-              <Clock className="size-6 animate-pulse text-pervinca" />
-              <div>
-                <p className="font-semibold">
-                  Sto calcolando il piano di {monthLabel(run.month)}…
-                </p>
-                <p className="text-sm text-muted">
-                  Di solito servono uno o due minuti. La pagina si aggiorna da
-                  sola.
-                </p>
-              </div>
-            </Card>
-          )}
-          {run?.status === "errore" && (
-            <Card className="p-6">
-              <p className="font-semibold text-danger">
-                Il calcolo non è riuscito
-              </p>
-              <p className="mt-1 break-words text-sm text-muted">{run.error}</p>
-            </Card>
-          )}
-          {run?.solution && <RunView run={run as RunRow} />}
-        </div>
-
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader
-              title="Invia gli orari"
-              subtitle="Un messaggio WhatsApp con le lezioni del mese"
-            />
-            <form action={sendSchedules} className="flex flex-col gap-2 p-5">
-              <Select
-                name="month"
-                aria-label="Mese degli orari da inviare"
-                defaultValue={run?.month ?? thisMonth}
-              >
-                {months.map((m) => (
-                  <option key={m} value={m}>
-                    {monthLabel(m)}
-                  </option>
-                ))}
-              </Select>
-              <Select
-                aria-label="Destinatari degli orari"
-                name="target"
-                defaultValue="tutti"
-              >
-                <option value="tutti">Famiglie e tutor</option>
-                <option value="famiglie">Solo famiglie</option>
-                <option value="tutor">Solo tutor</option>
-              </Select>
-              <Button
-                variant="outline"
-                confirmMessage="Verranno inviati messaggi WhatsApp ai destinatari selezionati, con le lezioni future del calendario confermato per il mese scelto. Controlla mese e destinatari prima di continuare."
-                confirmLabel="Invia gli orari"
-              >
-                <Send /> Invia gli orari
-              </Button>
-              <p className="text-xs text-muted">
-                Parte solo quando premi: le lezioni future del calendario
-                confermato.
-              </p>
-            </form>
-          </Card>
-          <Card>
-            <CardHeader title="Bozze recenti" />
-            <ul className="divide-y text-sm">
-              {(runs ?? []).map((r) => {
-                const stats = (r.stats ?? {}) as Record<string, number>;
-                return (
-                  <li key={r.id}>
-                    <Link
-                      href={`/piano?run=${r.id}`}
-                      className={cn(
-                        "flex items-center gap-2 px-5 py-2.5 hover:bg-ink/[0.03]",
-                        r.id === selectedId && "bg-pervinca/10",
-                      )}
+      {(runs ?? []).length > 0 && (
+        <nav aria-label="Bozze recenti" className="mb-6">
+          <p className="label-caps mb-2 text-muted">Bozze recenti</p>
+          <ul className="thin-scroll -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {(runs ?? []).map((r) => {
+              const stats = (r.stats ?? {}) as Record<string, number>;
+              const at = romeParts(new Date(r.created_at));
+              return (
+                <li key={r.id} className="shrink-0">
+                  <Link
+                    href={`/piano?run=${r.id}`}
+                    aria-current={r.id === selectedId ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-11 items-center gap-2 rounded-full border px-4 py-1.5 text-sm",
+                      r.id === selectedId
+                        ? "border-pervinca bg-pervinca/10"
+                        : "bg-surface hover:bg-ink/[0.03]",
+                    )}
+                  >
+                    <span className="font-semibold capitalize">
+                      {monthLabel(r.month)}
+                    </span>
+                    <span className="text-xs text-muted">
+                      {shortDate(at.date)} {hhmm(at.minutes)}
+                      {stats.sessions
+                        ? ` · ${stats.sessions_placed}/${stats.sessions}`
+                        : ""}
+                    </span>
+                    <Badge
+                      tone={
+                        r.status === "confermato"
+                          ? "ok"
+                          : r.status === "errore"
+                            ? "danger"
+                            : r.status === "bozza"
+                              ? "pervinca"
+                              : "neutral"
+                      }
                     >
-                      <span className="flex-1">
-                        <span className="font-medium capitalize">
-                          {monthLabel(r.month)}
-                        </span>
-                        <span className="block text-xs text-muted">
-                          {shortDate(romeParts(new Date(r.created_at)).date)}{" "}
-                          {hhmm(romeParts(new Date(r.created_at)).minutes)}
-                          {stats.sessions
-                            ? ` · ${stats.sessions_placed}/${stats.sessions} collocate`
-                            : ""}
-                        </span>
-                      </span>
-                      <Badge
-                        tone={
-                          r.status === "confermato"
-                            ? "ok"
-                            : r.status === "errore"
-                              ? "danger"
-                              : r.status === "bozza"
-                                ? "pervinca"
-                                : "neutral"
-                        }
-                      >
-                        {RUN_STATUS[r.status]}
-                      </Badge>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+                      {RUN_STATUS[r.status]}
+                    </Badge>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
+
+      <div className="flex min-w-0 flex-col gap-6">
+        {!run && (
+          <Card>
+            <Empty>
+              Nessun piano ancora. Scegli il mese in alto e calcola la prima
+              bozza.
+            </Empty>
           </Card>
-        </div>
+        )}
+        {run && computing && (
+          <Card className="flex items-center gap-4 p-6">
+            <Clock className="size-6 animate-pulse text-pervinca" />
+            <div>
+              <p className="font-semibold">
+                Sto calcolando il piano di {monthLabel(run.month)}…
+              </p>
+              <p className="text-sm text-muted">
+                Di solito servono uno o due minuti. La pagina si aggiorna da
+                sola.
+              </p>
+            </div>
+          </Card>
+        )}
+        {run?.status === "errore" && (
+          <Card className="p-6">
+            <p className="font-semibold text-danger">
+              Il calcolo non è riuscito
+            </p>
+            <p className="mt-1 break-words text-sm text-muted">{run.error}</p>
+          </Card>
+        )}
+        {run?.solution && <RunView run={run as RunRow} tab={sp.tab} />}
       </div>
     </>
   );
@@ -289,7 +357,7 @@ type RunRow = {
   solution: EngineSolution;
 };
 
-async function RunView({ run }: { run: RunRow }) {
+async function RunView({ run, tab }: { run: RunRow; tab?: string }) {
   const db = await sessionClient();
   const { data: subjects } = await db.from("subjects").select("id, name");
   const subject = new Map((subjects ?? []).map((s) => [s.id, s.name]));
@@ -343,7 +411,6 @@ async function RunView({ run }: { run: RunRow }) {
       x.exceptions.length ||
       x.relocated,
   );
-  const plain = sessions.filter((x) => !flagged.includes(x));
 
   return (
     <>
@@ -372,146 +439,195 @@ async function RunView({ run }: { run: RunRow }) {
         />
       </div>
 
+      <Tabs
+        initial={
+          tab ??
+          (sol.unplaced.length
+            ? "problemi"
+            : flagged.length
+              ? "variazioni"
+              : "tutte")
+        }
+        items={[
+          {
+            id: "problemi",
+            label: "Non collocate",
+            badge: sol.unplaced.length,
+            icon: (
+              <AlertTriangle aria-hidden="true" className="size-4 text-warn" />
+            ),
+            content: (
+              <Card>
+                <CardHeader
+                  title="Lezioni non collocate"
+                  subtitle="Restano fuori quelle che avrebbero violato gli impegni più importanti"
+                />
+                {sol.unplaced.length ? (
+                  <ul className="divide-y">
+                    {sol.unplaced.map((u, i) => (
+                      <li key={i} className="px-5 py-4 text-sm">
+                        <p className="flex flex-wrap items-center gap-2 font-semibold">
+                          {names(u.student_ids)} · {subject.get(u.subject_id)}
+                          {u.date ? (
+                            <Badge>{shortDate(u.date)}</Badge>
+                          ) : (
+                            u.session_index !== null && (
+                              <Badge>
+                                incontro {u.session_index + 1} della settimana
+                              </Badge>
+                            )
+                          )}
+                        </p>
+                        <ul className="mt-1.5 list-disc pl-5 text-ink-soft">
+                          {u.reasons.map((r) => (
+                            <li key={r}>{r}</li>
+                          ))}
+                        </ul>
+                        {u.suggestions.length > 0 && (
+                          <p className="mt-2 rounded-xl bg-pervinca/8 px-3 py-2 text-xs text-pervinca-strong">
+                            Possibili soluzioni: {u.suggestions.join(" · ")}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty>
+                    Tutte le lezioni richieste sono state collocate.
+                  </Empty>
+                )}
+              </Card>
+            ),
+          },
+          {
+            id: "variazioni",
+            label: "Variazioni",
+            badge: flagged.length,
+            content: (
+              <Card>
+                <CardHeader
+                  title="Lezioni con segnalazioni"
+                  subtitle="Piccole variazioni fatte dal motore per incastrare tutte le richieste"
+                />
+                {flagged.length ? (
+                  <SessionList
+                    rows={flagged}
+                    subject={subject}
+                    tutor={tutor}
+                    names={names}
+                  />
+                ) : (
+                  <Empty>Nessuna variazione: tutto come richiesto.</Empty>
+                )}
+              </Card>
+            ),
+          },
+          {
+            id: "gruppi",
+            label: "Gruppi suggeriti",
+            badge: sol.group_suggestions.length,
+            content: (
+              <Card>
+                <CardHeader
+                  title="Gruppi possibili"
+                  subtitle="Studenti con stessa materia e livello. Approvandolo, le loro richieste singole vengono sospese; poi ricalcola la bozza."
+                />
+                {sol.group_suggestions.length ? (
+                  <ul className="divide-y">
+                    {sol.group_suggestions.map((g, i) => (
+                      <li
+                        key={i}
+                        className="flex flex-wrap items-center gap-3 px-5 py-4 text-sm"
+                      >
+                        <Users
+                          aria-hidden="true"
+                          className="size-5 text-pervinca"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold">
+                            {subject.get(g.subject_id)}{" "}
+                            {g.level && <Badge>{g.level}</Badge>}{" "}
+                            {g.topic && (
+                              <Badge tone="pervinca">{g.topic}</Badge>
+                            )}
+                          </p>
+                          <p className="text-ink-soft">
+                            {names(g.student_ids)}
+                          </p>
+                          <p className="text-xs text-muted">
+                            {g.note} · tutor possibili:{" "}
+                            {g.tutor_ids.map((t) => tutor.get(t)).join(", ")}
+                          </p>
+                        </div>
+                        <SheetForm
+                          action={approveGroup}
+                          success="Gruppo approvato: ricalcola la bozza"
+                        >
+                          <input type="hidden" name="run_id" value={run.id} />
+                          <input type="hidden" name="index" value={i} />
+                          <Button size="sm" variant="outline">
+                            Approva gruppo
+                          </Button>
+                        </SheetForm>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty>Nessun gruppo da proporre.</Empty>
+                )}
+              </Card>
+            ),
+          },
+          {
+            id: "tutte",
+            label: "Tutte le lezioni",
+            badge: sessions.length,
+            content: (
+              <Card>
+                <SessionList
+                  rows={sessions}
+                  subject={subject}
+                  tutor={tutor}
+                  names={names}
+                />
+              </Card>
+            ),
+          },
+        ]}
+      />
+
       {run.status === "bozza" && (
-        <Card className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center">
+        <div className="sticky bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 flex flex-col gap-3 rounded-2xl border bg-surface/95 p-4 shadow-xl backdrop-blur-md sm:flex-row sm:items-center lg:bottom-4">
           <p className="flex-1 text-sm">
             Bozza di{" "}
-            <strong className="capitalize">{monthLabel(run.month)}</strong>.
-            Confermando, le lezioni future non bloccate del mese vengono
-            sostituite da queste. Nessun messaggio parte in automatico.
+            <strong className="capitalize">{monthLabel(run.month)}</strong>:
+            confermando, le lezioni future non bloccate del mese vengono
+            sostituite.
           </p>
-          <form action={discardPlan}>
-            <input type="hidden" name="run_id" value={run.id} />
-            <Button
-              variant="ghost"
-              confirmMessage="Questa bozza verrà scartata. Il calendario confermato non verrà modificato."
-              confirmLabel="Scarta bozza"
-            >
-              Scarta bozza
-            </Button>
-          </form>
-          <form action={confirmPlan}>
-            <input type="hidden" name="run_id" value={run.id} />
-            <Button
-              variant="primary"
-              confirmMessage="Le lezioni future non bloccate del mese saranno sostituite con questa bozza. Le lezioni bloccate rimarranno invariate. Nessun messaggio verrà inviato automaticamente."
-              confirmLabel="Conferma nel calendario"
-            >
-              <CalendarCheck /> Conferma nel calendario
-            </Button>
-          </form>
-        </Card>
-      )}
-
-      {sol.unplaced.length > 0 && (
-        <Card>
-          <CardHeader
-            title="Lezioni non collocate"
-            subtitle="Restano fuori quelle che avrebbero violato gli impegni più importanti"
-          />
-          <ul className="divide-y">
-            {sol.unplaced.map((u, i) => (
-              <li key={i} className="px-5 py-4 text-sm">
-                <p className="flex flex-wrap items-center gap-2 font-semibold">
-                  <AlertTriangle className="size-4 text-warn" />
-                  {names(u.student_ids)} · {subject.get(u.subject_id)}
-                  {u.date ? (
-                    <Badge>{shortDate(u.date)}</Badge>
-                  ) : (
-                    u.session_index !== null && (
-                      <Badge>
-                        incontro {u.session_index + 1} della settimana
-                      </Badge>
-                    )
-                  )}
-                </p>
-                <ul className="mt-1.5 list-disc pl-10 text-ink-soft">
-                  {u.reasons.map((r) => (
-                    <li key={r}>{r}</li>
-                  ))}
-                </ul>
-                {u.suggestions.length > 0 && (
-                  <p className="mt-2 pl-6 text-xs text-pervinca-strong">
-                    Possibili soluzioni: {u.suggestions.join(" · ")}
-                  </p>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      )}
-
-      {sol.group_suggestions.length > 0 && (
-        <Card>
-          <CardHeader
-            title="Gruppi possibili"
-            subtitle="Studenti con stessa materia e livello. Approvandolo, le loro richieste singole vengono sospese"
-          />
-          <ul className="divide-y">
-            {sol.group_suggestions.map((g, i) => (
-              <li
-                key={i}
-                className="flex flex-wrap items-center gap-3 px-5 py-4 text-sm"
+          <div className="flex flex-wrap gap-2">
+            <form action={discardPlan}>
+              <input type="hidden" name="run_id" value={run.id} />
+              <Button
+                variant="ghost"
+                confirmMessage="Questa bozza verrà scartata. Il calendario confermato non verrà modificato."
+                confirmLabel="Scarta bozza"
               >
-                <Users className="size-5 text-pervinca" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">
-                    {subject.get(g.subject_id)}{" "}
-                    {g.level && <Badge>{g.level}</Badge>}{" "}
-                    {g.topic && <Badge tone="pervinca">{g.topic}</Badge>}
-                  </p>
-                  <p className="text-ink-soft">{names(g.student_ids)}</p>
-                  <p className="text-xs text-muted">
-                    {g.note} · tutor possibili:{" "}
-                    {g.tutor_ids.map((t) => tutor.get(t)).join(", ")}
-                  </p>
-                </div>
-                <form action={approveGroup}>
-                  <input type="hidden" name="run_id" value={run.id} />
-                  <input type="hidden" name="index" value={i} />
-                  <Button size="sm" variant="outline">
-                    Approva gruppo
-                  </Button>
-                </form>
-              </li>
-            ))}
-          </ul>
-          <p className="border-t px-5 py-3 text-xs text-muted">
-            Dopo aver approvato un gruppo, ricalcola la bozza per collocarlo.
-          </p>
-        </Card>
+                Scarta
+              </Button>
+            </form>
+            <form action={confirmPlan}>
+              <input type="hidden" name="run_id" value={run.id} />
+              <Button
+                variant="primary"
+                confirmMessage="Le lezioni future non bloccate del mese saranno sostituite con questa bozza. Le lezioni bloccate rimarranno invariate. Nessun messaggio verrà inviato automaticamente."
+                confirmLabel="Conferma nel calendario"
+              >
+                <CalendarCheck /> Conferma nel calendario
+              </Button>
+            </form>
+          </div>
+        </div>
       )}
-
-      <Card>
-        <CardHeader
-          title="Lezioni con segnalazioni"
-          subtitle="Piccole variazioni fatte dal motore per incastrare tutte le richieste"
-        />
-        {flagged.length ? (
-          <SessionList
-            rows={flagged}
-            subject={subject}
-            tutor={tutor}
-            names={names}
-          />
-        ) : (
-          <Empty>Nessuna variazione: tutto come richiesto.</Empty>
-        )}
-      </Card>
-
-      <Card>
-        <details>
-          <summary className="cursor-pointer px-5 py-4 font-serif text-lg">
-            Tutte le altre lezioni ({plain.length})
-          </summary>
-          <SessionList
-            rows={plain}
-            subject={subject}
-            tutor={tutor}
-            names={names}
-          />
-        </details>
-      </Card>
     </>
   );
 }

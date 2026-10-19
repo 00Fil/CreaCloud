@@ -17,31 +17,24 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
+
+import { CommandPalette, SearchButton } from "./kit/command-palette";
+import { Toaster } from "./kit/toast";
 
 import { cn } from "./ui";
 
 const NAV = [
-  {
-    href: "/",
-    label: "Oggi",
-    icon: LayoutDashboard,
-    badge: "actions" as const,
-  },
-  {
-    href: "/chat",
-    label: "Chat",
-    icon: MessageCircle,
-    badge: "chats" as const,
-  },
-  { href: "/persone", label: "Persone", icon: Users },
-  { href: "/piano", label: "Pianificazione", icon: CalendarRange },
-  { href: "/calendario", label: "Calendario", icon: CalendarDays },
-  { href: "/conti", label: "Conti", icon: Wallet },
-  { href: "/impostazioni", label: "Impostazioni", icon: Settings },
+  { href: "/", label: "Oggi", icon: LayoutDashboard, badge: "actions" as const, group: "Ogni giorno" },
+  { href: "/chat", label: "Chat", icon: MessageCircle, badge: "chats" as const, group: "Ogni giorno" },
+  { href: "/calendario", label: "Calendario", icon: CalendarDays, group: "Ogni giorno" },
+  { href: "/persone", label: "Persone", icon: Users, group: "Organizzazione" },
+  { href: "/piano", label: "Pianificazione", icon: CalendarRange, group: "Organizzazione" },
+  { href: "/conti", label: "Conti", icon: Wallet, group: "Organizzazione" },
+  { href: "/impostazioni", label: "Impostazioni", icon: Settings, group: "Centro" },
 ];
 
-const MOBILE = ["/", "/chat", "/persone", "/piano", "/conti"];
+const MOBILE = ["/", "/chat", "/calendario", "/persone", "/conti"];
 
 function isActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -91,11 +84,13 @@ export function Shell({
       aria-label="Navigazione principale"
       className="flex flex-1 flex-col gap-1 overflow-y-auto px-4 py-2 thin-scroll"
     >
-      <p className="label-caps mb-3 px-3 text-muted">Generale</p>
-      {NAV.map(({ href, label, icon: Icon, badge }) => {
+      {NAV.map(({ href, label, icon: Icon, badge, group }, i) => {
         const active = isActive(pathname, href);
         const n = badge ? counts[badge] : 0;
+        const heading = group !== NAV[i - 1]?.group ? group : null;
         return (
+          <Fragment key={href}>
+          {heading && <p className={cn("label-caps mb-1.5 px-3 text-muted", i > 0 && "mt-5")}>{heading}</p>}
           <Link
             key={href}
             href={href}
@@ -126,6 +121,7 @@ export function Shell({
               </span>
             )}
           </Link>
+          </Fragment>
         );
       })}
     </nav>
@@ -164,7 +160,10 @@ export function Shell({
   return (
     <div className="flex min-h-dvh">
       <aside className="sticky top-0 hidden h-dvh w-72 shrink-0 flex-col border-r bg-surface shadow-[4px_0_24px_rgba(0,0,0,0.02)] lg:flex">
-        <div className="px-7 py-7">{brand}</div>
+        <div className="px-7 pb-5 pt-7">{brand}</div>
+        <div className="px-4 pb-3">
+          <SearchButton />
+        </div>
         {nav}
         {footer}
       </aside>
@@ -220,7 +219,7 @@ export function Shell({
             <Menu className="size-5" />
           </button>
           <p className="font-serif text-lg">Creattivamente</p>
-          <span className="w-9" />
+          <SearchButton compact />
         </header>
         <main
           id="main-content"
@@ -265,6 +264,8 @@ export function Shell({
           )}
         </nav>
       </div>
+      <CommandPalette />
+      <Toaster />
     </div>
   );
 }

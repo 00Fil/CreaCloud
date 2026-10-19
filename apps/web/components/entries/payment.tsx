@@ -15,7 +15,6 @@ export function PaymentEntry({
   today,
   suggested = 0,
   personName,
-  compact = false,
 }: {
   action: EntryAction;
   idName: string;
@@ -24,7 +23,6 @@ export function PaymentEntry({
   today: string;
   suggested?: number;
   personName: string;
-  compact?: boolean;
 }) {
   const tutor = idName === "tutor_id";
   const content = (
@@ -35,7 +33,7 @@ export function PaymentEntry({
           ? null
           : "L’importo deve essere maggiore di zero."
       }
-      className={compact ? "mt-3 min-w-56 space-y-3" : "border-t p-5"}
+      className="border-t p-5"
       submitLabel={
         tutor
           ? "Registra il pagamento al tutor"
@@ -70,16 +68,7 @@ export function PaymentEntry({
       </EntrySummary>
     </EntryForm>
   );
-  return compact ? (
-    <details className="min-w-48">
-      <summary className="cursor-pointer text-sm font-semibold text-ink underline decoration-pervinca underline-offset-4">
-        {tutor ? "Registra pagamento" : "Registra incasso"}
-      </summary>
-      {content}
-    </details>
-  ) : (
-    content
-  );
+  return content;
 }
 function PaymentAmount({ suggested }: { suggested: number }) {
   const [amount, setAmount] = useState("");

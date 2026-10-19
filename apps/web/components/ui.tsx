@@ -187,7 +187,7 @@ export function PageHeader({
           <div className="mt-2 text-sm text-ink-soft">{children}</div>
         )}
       </div>
-      {action && <div className="flex flex-wrap gap-2">{action}</div>}
+      {action && <div className="flex flex-wrap gap-2 sm:shrink-0">{action}</div>}
     </header>
   );
 }
