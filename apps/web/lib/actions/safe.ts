@@ -5,6 +5,7 @@
  *   "use server";
  *   export const createRoom = action(roomSchema, async (input, { db, staff }) => {
  *     ok(await db.from("rooms").insert(input), "creazione aula");
+ *     const room = okRow(await db.from("rooms").select("*").eq("id", id).single(), "aula");
  *     revalidatePath("/impostazioni");
  *   });
  */
@@ -47,19 +48,31 @@ const PG_MESSAGES: Record<string, string> = {
   PGRST116: "Elemento non trovato: forse è stato eliminato.",
 };
 
-interface DbResponse<T> {
-  data: T | null;
+interface DbResponse {
+  data: unknown;
   error: { message: string; code?: string } | null;
 }
 
-/** Restituisce i dati di una risposta Supabase o lancia un ActionError leggibile. */
-export function ok<T>(res: DbResponse<T>, what: string): T {
-  if (res.error) {
-    console.error(`[azione] ${what}:`, res.error);
-    const known = res.error.code ? PG_MESSAGES[res.error.code] : undefined;
-    throw new ActionError(known ?? `Operazione non riuscita (${what}).`);
-  }
-  return res.data as T;
+function fail(error: { message: string; code?: string }, what: string): never {
+  console.error(`[azione] ${what}:`, error);
+  const known = error.code ? PG_MESSAGES[error.code] : undefined;
+  throw new ActionError(known ?? `Operazione non riuscita (${what}).`);
+}
+
+/**
+ * Controlla una risposta Supabase: in caso di errore lancia un ActionError
+ * leggibile, altrimenti restituisce i dati (null per insert/update senza select).
+ */
+export function ok<R extends DbResponse>(res: R, what: string): R["data"] {
+  if (res.error) fail(res.error, what);
+  return res.data;
+}
+
+/** Come `ok`, ma i dati devono esserci (`.single()`, select): altrimenti "Elemento non trovato". */
+export function okRow<R extends DbResponse>(res: R, what: string): NonNullable<R["data"]> {
+  if (res.error) fail(res.error, what);
+  if (res.data == null) throw new ActionError(PG_MESSAGES.PGRST116);
+  return res.data as NonNullable<R["data"]>;
 }
 
 function fieldErrorsOf(error: z.ZodError): FieldErrors {

@@ -62,7 +62,7 @@ export const createRoom = action(roomSchema, async (input, { db, staff }) => {
 ```
 
 - `action()` verifica lo staff, valida l'input e restituisce `{ ok, data }` o `{ ok: false, error, fieldErrors }`: mai eccezioni al browser.
-- `ok(res, "cosa")` trasforma gli errori di Supabase in messaggi italiani; `ActionError` per errori previsti ("La lezione è già annullata").
+- `ok(res, "cosa")` trasforma gli errori di Supabase in messaggi italiani; `okRow(res, "cosa")` in più garantisce che la riga ci sia (`.single()`); `ActionError` per errori previsti ("La lezione è già annullata").
 - Nel browser: `FormPanel` per creare e modificare (pannello laterale su desktop, dal basso su telefono), `useAction` per i pulsanti, `Confirm` prima di eliminare o di mandare messaggi.
 - I campi (`components/app/fields.tsx`) tengono i valori nel tipo naturale: euro in centesimi, orari in minuti, date "AAAA-MM-GG", giorni 0 = lunedì.
 
