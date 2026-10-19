@@ -3,6 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import {
+  validateDayInput,
+  validateHoursInput,
+  validateModesInput,
+  validatePaymentInput,
+  validateRequestInput,
+} from "@/lib/ui/entry-validation";
 import { requireStaff } from "@/lib/auth/staff";
 import { audit } from "@/lib/db/actions";
 import { sessionClient } from "@/lib/db/clients";
@@ -11,10 +18,16 @@ import { normalizePhone } from "@/lib/whatsapp/types";
 
 const str = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 const opt = (fd: FormData, k: string) => str(fd, k) || null;
-const int = (fd: FormData, k: string) => (str(fd, k) === "" ? null : Math.round(Number(str(fd, k).replace(",", "."))));
-const cents = (fd: FormData, k: string) => (str(fd, k) === "" ? null : Math.round(Number(str(fd, k).replace(",", ".")) * 100));
-const phone = (fd: FormData, k: string) => (str(fd, k) ? normalizePhone(str(fd, k)) : null);
-const time = (fd: FormData, k: string, fallback: number) => parseHhmm(str(fd, k)) ?? fallback;
+const int = (fd: FormData, k: string) =>
+  str(fd, k) === "" ? null : Math.round(Number(str(fd, k).replace(",", ".")));
+const cents = (fd: FormData, k: string) =>
+  str(fd, k) === ""
+    ? null
+    : Math.round(Number(str(fd, k).replace(",", ".")) * 100);
+const phone = (fd: FormData, k: string) =>
+  str(fd, k) ? normalizePhone(str(fd, k)) : null;
+const time = (fd: FormData, k: string, fallback: number) =>
+  parseHhmm(str(fd, k)) ?? fallback;
 
 async function ctx() {
   const staff = await requireStaff();
@@ -29,7 +42,11 @@ function check(res: { error: { message: string } | null }) {
 
 export async function createFamily(fd: FormData) {
   const { db, staff } = await ctx();
-  const fam = await db.from("families").insert({ name: str(fd, "family_name") }).select("id").single();
+  const fam = await db
+    .from("families")
+    .insert({ name: str(fd, "family_name") })
+    .select("id")
+    .single();
   check(fam);
   const familyId = fam.data!.id;
   if (str(fd, "parent_first_name")) {
@@ -67,7 +84,8 @@ export async function updateFamily(fd: FormData) {
         name: str(fd, "name"),
         notes: str(fd, "notes"),
         minors_contact_consent: fd.get("minors_contact_consent") === "on",
-        privacy_consent_at: fd.get("privacy_consent") === "on" ? new Date().toISOString() : null,
+        privacy_consent_at:
+          fd.get("privacy_consent") === "on" ? new Date().toISOString() : null,
       })
       .eq("id", id),
   );
@@ -84,7 +102,11 @@ export async function upsertParent(fd: FormData) {
     email: opt(fd, "email"),
   };
   const id = str(fd, "id");
-  check(id ? await db.from("parents").update(row).eq("id", id) : await db.from("parents").insert(row));
+  check(
+    id
+      ? await db.from("parents").update(row).eq("id", id)
+      : await db.from("parents").insert(row),
+  );
   revalidatePath(`/persone/famiglia/${row.family_id}`);
 }
 
@@ -101,7 +123,11 @@ export async function upsertStudent(fd: FormData) {
     max_lessons_per_day: int(fd, "max_lessons_per_day"),
   };
   const id = str(fd, "id");
-  check(id ? await db.from("students").update(row).eq("id", id) : await db.from("students").insert(row));
+  check(
+    id
+      ? await db.from("students").update(row).eq("id", id)
+      : await db.from("students").insert(row),
+  );
   revalidatePath(`/persone/famiglia/${row.family_id}`);
 }
 
@@ -111,7 +137,11 @@ export async function deletePerson(fd: FormData) {
   if (!["parents", "students"].includes(table)) return;
   const id = str(fd, "id");
   // gli studenti restano nello storico (lezioni e conti), i genitori si possono eliminare
-  check(table === "students" ? await db.from("students").update({ active: false }).eq("id", id) : await db.from("parents").delete().eq("id", id));
+  check(
+    table === "students"
+      ? await db.from("students").update({ active: false }).eq("id", id)
+      : await db.from("parents").delete().eq("id", id),
+  );
   await audit(db, staff.userId, "rimuovi", table, id, {});
   revalidatePath(`/persone/famiglia/${str(fd, "family_id")}`);
 }
@@ -119,6 +149,8 @@ export async function deletePerson(fd: FormData) {
 // ------------------------------------------------------------ vincoli e richieste
 
 export async function addConstraint(fd: FormData) {
+  const validation = validateDayInput(fd);
+  if (validation) throw new Error(validation);
   const { db } = await ctx();
   const date = opt(fd, "date");
   const allDay = fd.get("all_day") === "on";
@@ -143,12 +175,21 @@ export async function addConstraint(fd: FormData) {
 export async function updateConstraint(fd: FormData) {
   const { db } = await ctx();
   const id = str(fd, "id");
-  if (fd.get("delete") === "1") check(await db.from("student_constraints").delete().eq("id", id));
-  else check(await db.from("student_constraints").update({ priority: int(fd, "priority"), priority_confirmed: true }).eq("id", id));
+  if (fd.get("delete") === "1")
+    check(await db.from("student_constraints").delete().eq("id", id));
+  else
+    check(
+      await db
+        .from("student_constraints")
+        .update({ priority: int(fd, "priority"), priority_confirmed: true })
+        .eq("id", id),
+    );
   revalidatePath(`/persone/famiglia/${str(fd, "family_id")}`);
 }
 
 export async function addRequest(fd: FormData) {
+  const validation = validateRequestInput(fd);
+  if (validation) throw new Error(validation);
   const { db } = await ctx();
   const studentIds = fd.getAll("student_ids").map(String).filter(Boolean);
   const req = await db
@@ -171,7 +212,16 @@ export async function addRequest(fd: FormData) {
     .select("id")
     .single();
   check(req);
-  check(await db.from("lesson_request_students").insert(studentIds.map((sid) => ({ request_id: req.data!.id, student_id: sid }))));
+  check(
+    await db
+      .from("lesson_request_students")
+      .insert(
+        studentIds.map((sid) => ({
+          request_id: req.data!.id,
+          student_id: sid,
+        })),
+      ),
+  );
   revalidatePath(`/persone/famiglia/${str(fd, "family_id")}`);
 }
 
@@ -182,7 +232,12 @@ export async function setRequestStatus(fd: FormData) {
   check(
     await db
       .from("lesson_requests")
-      .update({ status, ...(status === "attiva" ? { approved_by: staff.userId, approved_at: new Date().toISOString() } : {}) })
+      .update({
+        status,
+        ...(status === "attiva"
+          ? { approved_by: staff.userId, approved_at: new Date().toISOString() }
+          : {}),
+      })
       .eq("id", str(fd, "id")),
   );
   revalidatePath(`/persone/famiglia/${str(fd, "family_id")}`);
@@ -192,6 +247,8 @@ export async function setRequestStatus(fd: FormData) {
 // ------------------------------------------------------------ tutor
 
 export async function upsertTutor(fd: FormData) {
+  const validation = validateModesInput(fd);
+  if (validation) throw new Error(validation);
   const { db } = await ctx();
   const modes = fd.getAll("modes").map(String);
   const row = {
@@ -199,11 +256,17 @@ export async function upsertTutor(fd: FormData) {
     last_name: str(fd, "last_name"),
     phone: phone(fd, "phone"),
     email: opt(fd, "email"),
-    modes: modes.length ? modes : ["presenza"],
+    modes,
     hourly_rate_cents: cents(fd, "hourly_rate") ?? 0,
     group_hourly_rate_cents: cents(fd, "group_hourly_rate"),
-    max_weekly_minutes: int(fd, "max_weekly_hours") !== null ? int(fd, "max_weekly_hours")! * 60 : null,
-    max_daily_minutes: int(fd, "max_daily_hours") !== null ? int(fd, "max_daily_hours")! * 60 : null,
+    max_weekly_minutes:
+      int(fd, "max_weekly_hours") !== null
+        ? int(fd, "max_weekly_hours")! * 60
+        : null,
+    max_daily_minutes:
+      int(fd, "max_daily_hours") !== null
+        ? int(fd, "max_daily_hours")! * 60
+        : null,
     active: fd.get("active") !== "off",
   };
   const id = str(fd, "id");
@@ -222,34 +285,71 @@ export async function setTutorSubject(fd: FormData) {
   const tutorId = str(fd, "tutor_id");
   const subjectId = str(fd, "subject_id");
   if (fd.get("delete") === "1") {
-    check(await db.from("tutor_subjects").delete().eq("tutor_id", tutorId).eq("subject_id", subjectId));
+    check(
+      await db
+        .from("tutor_subjects")
+        .delete()
+        .eq("tutor_id", tutorId)
+        .eq("subject_id", subjectId),
+    );
   } else {
-    const levels = str(fd, "levels").split(",").map((s) => s.trim()).filter(Boolean);
-    check(await db.from("tutor_subjects").upsert({ tutor_id: tutorId, subject_id: subjectId, levels }));
+    const levels = str(fd, "levels")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    check(
+      await db
+        .from("tutor_subjects")
+        .upsert({ tutor_id: tutorId, subject_id: subjectId, levels }),
+    );
   }
   revalidatePath(`/persone/tutor/${tutorId}`);
 }
 
 export async function addAvailability(fd: FormData) {
+  const validation = validateHoursInput(fd);
+  if (validation) throw new Error(validation);
   const { db } = await ctx();
   const tutorId = str(fd, "tutor_id");
   const days = fd.getAll("weekday").map(Number);
   const start = time(fd, "start", 15 * 60);
   const end = time(fd, "end", 19 * 60);
-  if (end <= start || !days.length) return;
-  check(await db.from("tutor_availability").insert(days.map((weekday) => ({ tutor_id: tutorId, weekday, start_min: start, end_min: end }))));
+  if (end <= start || !days.length)
+    throw new Error("Scegli almeno un giorno e una fascia valida.");
+  check(
+    await db
+      .from("tutor_availability")
+      .insert(
+        days.map((weekday) => ({
+          tutor_id: tutorId,
+          weekday,
+          start_min: start,
+          end_min: end,
+        })),
+      ),
+  );
   revalidatePath(`/persone/tutor/${tutorId}`);
 }
 
 export async function removeRow(fd: FormData) {
   const { db } = await ctx();
   const table = str(fd, "table");
-  if (!["tutor_availability", "tutor_absences", "family_payments", "tutor_payouts"].includes(table)) return;
+  if (
+    ![
+      "tutor_availability",
+      "tutor_absences",
+      "family_payments",
+      "tutor_payouts",
+    ].includes(table)
+  )
+    return;
   check(await db.from(table).delete().eq("id", str(fd, "id")));
   revalidatePath(str(fd, "path") || "/persone");
 }
 
 export async function addAbsence(fd: FormData) {
+  const validation = validateDayInput(fd);
+  if (validation) throw new Error(validation);
   const { db } = await ctx();
   const tutorId = str(fd, "tutor_id");
   const allDay = fd.get("all_day") === "on";
@@ -268,9 +368,12 @@ export async function addAbsence(fd: FormData) {
 // ------------------------------------------------------------ pagamenti (contanti)
 
 export async function addFamilyPayment(fd: FormData) {
+  const validation = validatePaymentInput(fd);
+  if (validation) throw new Error(validation);
   const { db, staff } = await ctx();
   const amount = cents(fd, "amount");
-  if (!amount || amount <= 0) return;
+  if (!amount || amount <= 0)
+    throw new Error("Inserisci un importo maggiore di zero.");
   check(
     await db.from("family_payments").insert({
       family_id: str(fd, "family_id"),
@@ -286,9 +389,12 @@ export async function addFamilyPayment(fd: FormData) {
 }
 
 export async function addTutorPayout(fd: FormData) {
+  const validation = validatePaymentInput(fd);
+  if (validation) throw new Error(validation);
   const { db, staff } = await ctx();
   const amount = cents(fd, "amount");
-  if (!amount || amount <= 0) return;
+  if (!amount || amount <= 0)
+    throw new Error("Inserisci un importo maggiore di zero.");
   check(
     await db.from("tutor_payouts").insert({
       tutor_id: str(fd, "tutor_id"),

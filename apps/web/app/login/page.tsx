@@ -21,13 +21,23 @@ const ERRORS: Record<string, string> = {
   non_abilitato: "Questo account non è abilitato al coordinamento.",
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ errore?: string; next?: string }> }) {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ errore?: string; next?: string }>;
+}) {
   const { errore, next } = await searchParams;
   return (
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">
       <Card className="w-full max-w-sm p-7">
         <div className="mb-7 flex items-center gap-3">
-          <Image src="/logo.png" alt="Logo Creattivamente" width={52} height={52} className="rounded-full" />
+          <Image
+            src="/logo.png"
+            alt="Logo Creattivamente"
+            width={52}
+            height={52}
+            className="rounded-full"
+          />
           <div>
             <h1 className="text-2xl leading-none">Creattivamente</h1>
             <p className="label-caps mt-1.5 text-pesca">Coordinamento</p>
@@ -39,9 +49,18 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <Input name="email" type="email" autoComplete="email" required />
           </Field>
           <Field label="Password">
-            <Input name="password" type="password" autoComplete="current-password" required />
+            <Input
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+            />
           </Field>
-          {errore && <p className="text-sm text-danger">{ERRORS[errore] ?? "Accesso non riuscito."}</p>}
+          {errore && (
+            <p role="alert" className="text-sm text-danger">
+              {ERRORS[errore] ?? "Accesso non riuscito."}
+            </p>
+          )}
           <Button type="submit" className="mt-2 w-full">
             Entra
           </Button>

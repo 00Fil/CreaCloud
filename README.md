@@ -90,3 +90,9 @@ L'assistente usa Gemini: un modello veloce per i messaggi semplici e uno più ca
 ### Rischi del canale non ufficiale
 
 Waxum collega il numero come dispositivo WhatsApp tramite una libreria non ufficiale. Il self-hosting non elimina possibili blocchi dell’account né rende l’integrazione una Cloud API ufficiale. Di default l’AI risponde solo a chat con messaggi ricevuti; lo staff può scrivere manualmente. Nessuna funzione di “fake reply” viene utilizzata.
+
+## Migliorie UX e accessibilità
+
+Per interventi, preferenze delle animazioni, verifiche e collaudo prima del rilascio, consulta [la nota UX](docs/ux-accessibilita.md).
+
+La revisione successiva introduce [interfacce dedicate per gli inserimenti](docs/inserimenti-dedicati.md), senza checkbox native o scelte implicite nei nuovi moduli.
