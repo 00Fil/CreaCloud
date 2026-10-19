@@ -1,275 +1,295 @@
 /*
- * Design system Creattivamente (trasposto dal sito base):
- * Fraunces per i titoli, Manrope per l'interfaccia, carta calda come sfondo,
- * pervinca come colore primario, pesca come secondario, forme morbide a pillola.
+ * Design system CreaCloud su shadcn/ui.
+ * Identità Creattivamente: Fraunces per i titoli, Manrope per l'interfaccia,
+ * carta calda come sfondo, pervinca come colore primario, pesca come accento.
+ * I token seguono le convenzioni shadcn (background, primary, muted, …).
  */
 @import "tailwindcss";
+@import "tw-animate-css";
 @import "@fontsource-variable/fraunces";
 @import "@fontsource-variable/manrope";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
-@theme {
-  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Fraunces Variable", ui-serif, Georgia, serif;
-
-  --color-paper: var(--paper);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-ink: var(--ink);
-  --color-ink-soft: var(--ink-soft);
-  --color-muted: var(--muted);
-  --color-line: var(--line);
-  --color-pervinca: #8c9bbe;
-  --color-pervinca-strong: #7a86b6;
-  --color-pesca: #d99a85;
-  --color-pesca-strong: #d98a6c;
-  --color-pesca-deep: #c27558;
-  --color-ok: var(--ok);
-  --color-warn: var(--warn);
-  --color-danger: var(--danger);
-
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
-
-  --shadow-soft:
-    0 1px 2px 0 rgb(0 0 0 / 0.04), 0 4px 24px -8px rgb(41 37 36 / 0.08);
-}
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --paper: #f9f8f6;
-  --surface: #ffffff;
-  --surface-2: #f5f5f4;
-  --ink: #292524;
-  --ink-soft: #57534e;
-  --muted: #8a867d;
-  --line: #e7e5e4;
-  --ok: #15803d;
-  --warn: #b45309;
-  --danger: #e11d48;
-  color-scheme: light;
-}
+  --radius: 0.75rem;
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --paper: #0a0a09;
-    --surface: #121212;
-    --surface-2: #1c1b1a;
-    --ink: #e7e5e4;
-    --ink-soft: #a8a29e;
-    --muted: #78716c;
-    --line: #27272a;
-    --ok: #4ade80;
-    --warn: #fbbf24;
-    --danger: #fb7185;
-    color-scheme: dark;
-  }
+  --background: #f9f8f6;
+  --foreground: #292524;
+  --card: #ffffff;
+  --card-foreground: #292524;
+  --popover: #ffffff;
+  --popover-foreground: #292524;
+  --primary: #5f6ba3;
+  --primary-foreground: #ffffff;
+  --secondary: #f1f0ed;
+  --secondary-foreground: #292524;
+  --muted: #f3f2ef;
+  --muted-foreground: #6f6a62;
+  --accent: #eceff8;
+  --accent-foreground: #3f4a7d;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e7e5e4;
+  --input: #dedbd7;
+  --ring: #8c9bbe;
+
+  /* colori del marchio e di stato */
+  --pervinca: #8c9bbe;
+  --pervinca-soft: #e6e9f5;
+  --pesca: #d98a6c;
+  --pesca-strong: #b5644a;
+  --pesca-soft: #f8e9e2;
+  --success: #15803d;
+  --success-soft: #e7f4ec;
+  --warning: #b45309;
+  --warning-soft: #fdf1e3;
+  --info: #2563eb;
+
+  /* chat WhatsApp */
+  --chat-wallpaper: #efece6;
+  --bubble-in: #ffffff;
+  --bubble-out: #e3e8f7;
+  --bubble-out-foreground: #232845;
+
+  --chart-1: #5f6ba3;
+  --chart-2: #d98a6c;
+  --chart-3: #6b9e8a;
+  --chart-4: #c9a64b;
+  --chart-5: #9a7fb8;
+
+  --sidebar: #fcfbf9;
+  --sidebar-foreground: #3b3633;
+  --sidebar-primary: #5f6ba3;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #efedea;
+  --sidebar-accent-foreground: #292524;
+  --sidebar-border: #ebe8e5;
+  --sidebar-ring: #8c9bbe;
 }
 
 .dark {
-  --paper: #0a0a09;
-  --surface: #121212;
-  --surface-2: #1c1b1a;
-  --ink: #e7e5e4;
-  --ink-soft: #a8a29e;
-  --muted: #78716c;
-  --line: #27272a;
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --danger: #fb7185;
-  color-scheme: dark;
+  --background: #0f0f0e;
+  --foreground: #e7e5e4;
+  --card: #171615;
+  --card-foreground: #e7e5e4;
+  --popover: #1c1b1a;
+  --popover-foreground: #e7e5e4;
+  --primary: #a3aed6;
+  --primary-foreground: #14172a;
+  --secondary: #252423;
+  --secondary-foreground: #e7e5e4;
+  --muted: #222120;
+  --muted-foreground: #a8a29e;
+  --accent: #262a3b;
+  --accent-foreground: #cfd5ee;
+  --destructive: #f87171;
+  --destructive-foreground: #1a0b0b;
+  --border: #2a2928;
+  --input: #353331;
+  --ring: #7a86b6;
+
+  --pervinca: #a3aed6;
+  --pervinca-soft: #23283c;
+  --pesca: #e0a088;
+  --pesca-strong: #e8b19c;
+  --pesca-soft: #3a2620;
+  --success: #4ade80;
+  --success-soft: #12261a;
+  --warning: #fbbf24;
+  --warning-soft: #2c2210;
+  --info: #60a5fa;
+
+  --chat-wallpaper: #121110;
+  --bubble-in: #1f1e1d;
+  --bubble-out: #2b3150;
+  --bubble-out-foreground: #e4e8f7;
+
+  --chart-1: #a3aed6;
+  --chart-2: #e0a088;
+  --chart-3: #8cc2ad;
+  --chart-4: #e0c172;
+  --chart-5: #bba3d6;
+
+  --sidebar: #131211;
+  --sidebar-foreground: #d6d3d1;
+  --sidebar-primary: #a3aed6;
+  --sidebar-primary-foreground: #14172a;
+  --sidebar-accent: #222120;
+  --sidebar-accent-foreground: #f5f5f4;
+  --sidebar-border: #262524;
+  --sidebar-ring: #7a86b6;
+}
+
+@theme inline {
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces Variable", ui-serif, Georgia, serif;
+  --font-heading: "Fraunces Variable", ui-serif, Georgia, serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-pervinca: var(--pervinca);
+  --color-pervinca-soft: var(--pervinca-soft);
+  --color-pesca: var(--pesca);
+  --color-pesca-strong: var(--pesca-strong);
+  --color-pesca-soft: var(--pesca-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+
+  --color-chat-wallpaper: var(--chat-wallpaper);
+  --color-bubble-in: var(--bubble-in);
+  --color-bubble-out: var(--bubble-out);
+  --color-bubble-out-foreground: var(--bubble-out-foreground);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {
   * {
-    border-color: var(--line);
+    @apply border-border outline-ring/50;
   }
-  html,
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-block: 5rem;
+  }
   body {
-    background: var(--paper);
-    color: var(--ink);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "ss01", "cv11";
   }
   h1,
   h2,
   h3 {
-    font-family: var(--font-serif);
+    font-family: var(--font-heading);
     font-weight: 500;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
   }
-  :focus-visible {
-    outline: 3px solid rgb(140 155 190 / 0.45);
-    outline-offset: 2px;
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"],
+  [role="option"],
+  [role="menuitem"] {
+    cursor: pointer;
   }
+  /* niente zoom automatico su iOS: testo dei campi almeno 16px su telefono */
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: max(16px, 1em);
+    }
+  }
+}
+
+/* Bersagli tattili da almeno 44px sui dispositivi touch. */
+@media (pointer: coarse) {
+  [data-slot="button"],
+  [data-slot="select-trigger"],
+  [data-slot="tabs-trigger"],
+  [data-slot="toggle"],
+  [data-slot="input"],
+  [data-slot="sidebar-menu-button"],
+  [data-slot="dropdown-menu-item"],
+  [data-slot="command-item"] {
+    min-height: 44px;
+  }
+  [data-slot="button"][data-size^="icon"] {
+    min-width: 44px;
+  }
+}
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent)
+    transparent;
 }
 
 @utility label-caps {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-}
-
-@utility thin-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(41 37 36 / 0.15) transparent;
+  letter-spacing: 0.14em;
 }
 
 .chat-wallpaper {
-  background-color: var(--surface-2);
+  background-color: var(--chat-wallpaper);
   background-image: radial-gradient(
-    rgb(140 155 190 / 0.12) 1px,
+    color-mix(in oklab, var(--pervinca) 22%, transparent) 1px,
     transparent 1px
   );
-  background-size: 18px 18px;
+  background-size: 20px 20px;
 }
 
-/* Behaviour layer: existing colours, typefaces and shapes remain the source of truth. */
-:root {
-  --motion-fast: 150ms;
-  --motion-enter: 180ms;
-  --motion-ease: cubic-bezier(0.2, 0.7, 0.3, 1);
-}
 .skip-link {
   position: fixed;
   top: 8px;
   left: 8px;
   z-index: 100;
-  padding: 12px 20px;
+  padding: 10px 18px;
   border-radius: 999px;
-  background: var(--ink);
-  color: var(--paper);
-  transform: translateY(-180%);
+  background: var(--foreground);
+  color: var(--background);
+  transform: translateY(-200%);
 }
 .skip-link:focus {
   transform: translateY(0);
 }
-button:not(:disabled),
-summary,
-select {
-  cursor: pointer;
-}
-input:not([type="checkbox"]):not([type="radio"]),
-select,
-textarea {
-  font-size: max(16px, 1em);
-}
-input[type="checkbox"],
-input[type="radio"] {
-  accent-color: #7a86b6;
-}
-summary {
-  min-height: 44px;
-  align-content: center;
-}
-.ux-dialog::backdrop,
-.ux-menu::backdrop {
-  background: rgb(41 37 36 / 0.3);
-  backdrop-filter: blur(3px);
-}
-.ux-dialog[open] {
-  animation: ux-appear var(--motion-enter) var(--motion-ease) both;
-}
-.ux-menu[open] {
-  animation: ux-slide var(--motion-enter) var(--motion-ease) both;
-}
-.ux-reveal {
-  animation: ux-appear var(--motion-enter) var(--motion-ease) both;
-}
-@keyframes ux-appear {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-@keyframes ux-slide {
-  from {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
+
+/* Preferenza di movimento: impostazione dell'app o del sistema operativo. */
 :root[data-motion="off"] *,
 :root[data-motion="off"] *::before,
 :root[data-motion="off"] *::after {
-  animation: none !important;
-  transition: none !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
   scroll-behavior: auto !important;
-}
-:root[data-motion="off"] [data-pressable] {
-  transform: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation: none !important;
-    transition: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  [data-pressable] {
-    transform: none !important;
-  }
-}
-@media (pointer: coarse) {
-  button[aria-label] {
-    min-width: 44px;
-    min-height: 44px;
-  }
-  label:has(input[type="checkbox"]),
-  label:has(input[type="radio"]) {
-    min-height: 44px;
-  }
-}
-/* Keep keyboard-focused controls clear of sticky mobile navigation. */
-html {
-  scroll-padding-block: 6rem;
-}
-input,
-select,
-textarea,
-button,
-a {
-  scroll-margin-block: 6rem;
-}
-body:has(dialog[open]) {
-  overflow: hidden;
-}
-
-/* Pannelli laterali (dal basso su telefono) */
-.ux-sheet {
-  position: fixed;
-}
-.ux-sheet::backdrop {
-  background: rgb(41 37 36 / 0.32);
-  backdrop-filter: blur(3px);
-}
-.ux-sheet[open] {
-  animation: ux-sheet-up var(--motion-enter) var(--motion-ease) both;
-}
-@media (min-width: 640px) {
-  .ux-sheet[open] {
-    animation-name: ux-sheet-in;
-  }
-}
-@keyframes ux-sheet-up {
-  from {
-    transform: translateY(24px);
-    opacity: 0;
-  }
-}
-@keyframes ux-sheet-in {
-  from {
-    transform: translateX(32px);
-    opacity: 0;
   }
 }
