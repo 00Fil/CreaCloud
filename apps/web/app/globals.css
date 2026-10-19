@@ -244,3 +244,32 @@ a {
 body:has(dialog[open]) {
   overflow: hidden;
 }
+
+/* Pannelli laterali (dal basso su telefono) */
+.ux-sheet {
+  position: fixed;
+}
+.ux-sheet::backdrop {
+  background: rgb(41 37 36 / 0.32);
+  backdrop-filter: blur(3px);
+}
+.ux-sheet[open] {
+  animation: ux-sheet-up var(--motion-enter) var(--motion-ease) both;
+}
+@media (min-width: 640px) {
+  .ux-sheet[open] {
+    animation-name: ux-sheet-in;
+  }
+}
+@keyframes ux-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes ux-sheet-in {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}

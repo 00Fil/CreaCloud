@@ -9,6 +9,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { toast } from "../kit/toast";
+import { useSheet } from "../kit/sheet";
 import { Button, cn, Input } from "../ui";
 
 export type EntryAction = (data: FormData) => Promise<void>;
@@ -304,6 +306,7 @@ export function EntryForm({
   const [revision, setRevision] = useState(0);
   const id = useId();
   const saveSucceeded = useRef(false);
+  const sheet = useSheet();
   const [state, submit, pending] = useActionState(
     async (_previous: string, data: FormData) => {
       saveSucceeded.current = false;
@@ -339,9 +342,14 @@ export function EntryForm({
     if (wasPending.current && state) {
       setRevision((n) => n + 1);
       setEditing(false);
+      // dentro un pannello: conferma con una notifica e chiudi
+      if (sheet) {
+        toast(state);
+        sheet.close();
+      }
     }
     wasPending.current = false;
-  }, [pending, state]);
+  }, [pending, state, sheet]);
   return (
     <form
       action={submit}

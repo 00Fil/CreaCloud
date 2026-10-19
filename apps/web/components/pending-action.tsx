@@ -63,10 +63,10 @@ export function PendingAction({ a }: { a: PendingActionRow }) {
           </div>
         )}
         {a.chat_id && (
-          <details className="group">
-            <summary className="cursor-pointer text-xs font-semibold text-muted hover:text-ink">Messaggio WhatsApp da inviare (facoltativo)</summary>
-            <Textarea name="notify" className="mt-2 text-sm" defaultValue={meta.info ? "" : (meta.approveMsg ?? "")} placeholder="Lascia vuoto per non inviare nulla" />
-          </details>
+          <label className="flex flex-col gap-1.5">
+            <span className="label-caps text-muted">Messaggio WhatsApp da inviare (facoltativo)</span>
+            <Textarea name="notify" rows={2} className="min-h-0 text-sm" defaultValue={meta.info ? "" : (meta.approveMsg ?? "")} placeholder="Lascia vuoto per non inviare nulla" />
+          </label>
         )}
         <div className="flex flex-wrap gap-2">
           {meta.info ? (
