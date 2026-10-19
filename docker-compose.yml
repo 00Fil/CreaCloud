@@ -1,0 +1,83 @@
+# Servizi applicativi: dashboard web, motore di pianificazione e Waxum self-hosted.
+# Il database è Supabase (progetto gestito in regione UE), quindi qui non c'è.
+#
+# Dokploy: crea un servizio "Compose" che punta a questo file (Compose Path ./docker-compose.yml),
+# incolla le variabili nella scheda Environment e aggiungi il dominio sul servizio `web`, porta 3000.
+# Guida completa: docs/dokploy.md. Per un server senza Dokploy: deploy/docker-compose.yml.
+#
+# Nessun servizio pubblica porte sull'host: HTTPS e dominio li gestisce il proxy davanti
+# (Traefik in Dokploy, Caddy in deploy/). Motore e Waxum restano raggiungibili solo dalla rete interna.
+
+services:
+  web:
+    build:
+      context: ./apps/web
+      args:
+        # finiscono nel codice del browser, quindi servono già in fase di build
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?manca NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?manca NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ENGINE_URL: http://engine:8000
+      WAXUM_URL: ${WAXUM_URL:-http://waxum:3451}
+      WAXUM_TOKEN: ${WAXUM_TOKEN:?manca WAXUM_TOKEN}
+      WAXUM_SESSION_ID: ${WAXUM_SESSION_ID:-creacloud}
+      WAXUM_WEBHOOK_SECRET: ${WAXUM_WEBHOOK_SECRET:?manca WAXUM_WEBHOOK_SECRET}
+      WAXUM_WEBHOOK_URL: ${WAXUM_WEBHOOK_URL:?manca WAXUM_WEBHOOK_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?manca SUPABASE_SERVICE_ROLE_KEY}
+    expose: ["3000"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+    depends_on:
+      engine:
+        condition: service_healthy
+
+  engine:
+    build: ./services/engine
+    environment:
+      ENGINE_TOKEN: ${ENGINE_TOKEN:?manca ENGINE_TOKEN}
+    expose: ["8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    restart: unless-stopped
+
+  waxum:
+    # Immagine ufficiale upstream, versione verificata. Nessuna porta pubblica.
+    image: ${WAXUM_IMAGE:-fdciabdul/waxum:0.16.0}
+    environment:
+      SUPERADMIN_TOKEN: ${WAXUM_TOKEN:?manca WAXUM_TOKEN}
+      JWT_SECRET: ${WAXUM_JWT_SECRET:?manca WAXUM_JWT_SECRET}
+      WHATSAPP_STORAGE_PATH: /app/whatsapp_sessions
+      SQLITE_PATH: /app/whatsapp_sessions/waxum.db
+      PORT: "3451"
+      RUST_LOG: waxum=info,tower_http=info
+      WEBHOOK_RETRY_MAX_ATTEMPTS: "5"
+      WEBHOOK_RETRY_ON_4XX: "true"
+    expose: ["3451"]
+    volumes:
+      - waxum-data:/app/whatsapp_sessions
+    healthcheck:
+      test: ["CMD", "/app/waxum", "--healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - creacloud-wa-interno-xhuhoh
+
+volumes:
+  waxum-data:

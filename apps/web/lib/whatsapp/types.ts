@@ -1,4 +1,4 @@
-export type WhatsAppProvider = "baileys" | "cloud";
+export type WhatsAppProvider = "waxum";
 
 /** Messaggio in arrivo normalizzato, indipendente dal canale. */
 export interface InboundMessage {

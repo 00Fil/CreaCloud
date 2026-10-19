@@ -155,7 +155,7 @@ export interface ChatState {
 }
 
 export interface Settings {
-  whatsappProvider: "baileys" | "cloud";
+  whatsappProvider: "waxum";
   cancellationHours: number;
   aiMonthlyBudgetEur: number;
   aiEnabled: boolean;

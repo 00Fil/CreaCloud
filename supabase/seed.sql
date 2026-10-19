@@ -113,7 +113,7 @@ begin
          'Perfetto, grazie! A mercoledì', 1
   from parents p where p.phone = '393401000001';
   insert into messages (chat_id, direction, author, body, provider, status, created_at)
-  select c.id, x.direction, x.author, x.body, 'baileys', x.status, now() - x.ago
+  select c.id, x.direction, x.author, x.body, 'waxum', x.status, now() - x.ago
   from chats c,
        (values ('in', 'utente', 'Buongiorno, Matteo il martedì ha calcio dalle 16:30 alle 18:30', 'ricevuto', interval '9 minutes'),
                ('out', 'ai', 'Buongiorno Giulia! Il calcio di Matteo è un impegno fisso che non si può spostare, o se serve si può saltare ogni tanto?', 'letto', interval '8 minutes'),

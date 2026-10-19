@@ -26,12 +26,16 @@ Collocare una lezione vale più di qualsiasi preferenza. Se una lezione si può 
 ```
 apps/web                  dashboard Next.js, webhook WhatsApp, assistente AI
 services/engine           motore di pianificazione (Python, FastAPI, OR-Tools)
-services/whatsapp-gateway collegamento al numero attuale (Baileys, non ufficiale)
+docker service waxum      API WhatsApp self-hosted (immagine upstream)
 supabase                  schema del database e dati di esempio
-deploy                    docker compose + Caddy per un server unico
+docker-compose.yml        servizi applicativi, usato da Dokploy
+deploy                    Caddy per un server senza Dokploy
+docs                      guida a Dokploy
 ```
 
-I due canali WhatsApp, il **numero attuale** (tramite gateway) e la **Cloud API ufficiale**, si scambiano da *Impostazioni*. Le risposte partono sempre dal canale da cui la persona ha scritto.
+Tutta l’integrazione WhatsApp usa **Waxum self-hosted**: nessun gateway Node/Baileys e nessuna chiamata diretta a Meta. Una sessione Waxum dedicata gestisce il numero del centro. Il database applicativo resta Supabase; AI e pianificatore non cambiano.
+
+Guida completa: [configurazione, migrazione e collaudo Waxum](docs/waxum.md).
 
 ## Provarlo in locale
 
@@ -53,7 +57,9 @@ npm run dev
 
 Apri http://localhost:3000 e accedi con `demo@creattivamente.local`, password `creattivamente` (solo dati di esempio).
 
-Test: `supabase test db` per i permessi del database, `pytest` in `services/engine`, `npm test` in `apps/web`, `npm run build && npm test` in `services/whatsapp-gateway`.
+Test: `pytest` in `services/engine`; `npm run typecheck`, `npm test` e `npm run build` in `apps/web`.
+
+Per provare anche WhatsApp in locale serve un’istanza Waxum raggiungibile dalla dashboard e un URL HTTPS pubblico che inoltri `/api/whatsapp/waxum` alla dashboard. Il webhook non accetta URL Docker interni o localhost (protezione SSRF di Waxum). Imposta `WAXUM_URL` su un indirizzo raggiungibile dal processo Next.js, non sul DNS Docker `waxum` se avvii Next.js fuori dai container.
 
 ## Messa in produzione
 
@@ -67,14 +73,15 @@ Test: `supabase test db` per i permessi del database, `pytest` in `services/engi
    insert into staff (id, full_name, role)
    select id, 'Nome Cognome', 'titolare' from auth.users where email = 'tua@email.it';
    ```
-3. **Server.** Su una VPS in UE con Docker:
+3. **Server.** Il modo consigliato è [Dokploy](docs/dokploy.md): scarica il repository da GitHub, avvia i servizi, gestisce HTTPS e rifà il deploy a ogni push. In alternativa, su una VPS in UE con solo Docker:
    ```bash
-   cd deploy && cp ../.env.example .env   # compila tutti i valori
-   docker compose up -d --build
+   cp .env.example .env   # compila tutti i valori
+   docker compose -f deploy/docker-compose.yml --env-file .env up -d --build
    ```
    Caddy ottiene il certificato HTTPS per `DOMAIN`.
-4. **Collegare il numero attuale.** Apri *Impostazioni* e inquadra il QR dal telefono (*WhatsApp → Dispositivi collegati*). Il telefono continua a funzionare normalmente.
-5. **Cloud API (facoltativa).** Configura il webhook dell'app Meta su `https://DOMAIN/api/whatsapp/cloud` con il token `WA_CLOUD_VERIFY_TOKEN`. Per scrivere a chi non ha scritto nelle ultime 24 ore serve un modello approvato (`WA_TEMPLATE_NAME`).
+4. **Waxum.** Configura `WAXUM_TOKEN`, `WAXUM_JWT_SECRET`, `WAXUM_SESSION_ID`, `WAXUM_WEBHOOK_SECRET` e `WAXUM_WEBHOOK_URL` nel file `.env`. Usa segreti distinti generati con `openssl rand -hex 32`. Nel Compose è inclusa l’istanza `fdciabdul/waxum:0.16.0`, con dati persistenti e senza porte pubbliche.
+5. **Collegare il numero.** Apri *Impostazioni → WhatsApp · Waxum*, premi **Collega / riconfigura webhook**, poi inquadra il QR dal telefono (*WhatsApp → Dispositivi collegati*). Il pulsante crea la sessione se manca e registra il webhook firmato. Il telefono continua a funzionare normalmente.
+6. **Collaudo.** Segui la checklist in [docs/waxum.md](docs/waxum.md). Servono un vero telefono e l’istanza self-hosted: i test automatici simulano le API, non la rete WhatsApp.
 
 ### Sicurezza
 
@@ -88,4 +95,10 @@ L'assistente usa Gemini: un modello veloce per i messaggi semplici e uno più ca
 
 ### Rischi del canale non ufficiale
 
-Il gateway si collega come WhatsApp Web e Meta può limitare o bloccare un numero se rileva un uso automatico. Per ridurre il rischio, il gateway risponde solo a chi ha già scritto al centro, con ritmi umani e l'indicatore «sta scrivendo». Per la produzione stabile conviene la Cloud API.
+Waxum collega il numero come dispositivo WhatsApp tramite una libreria non ufficiale. Il self-hosting non elimina possibili blocchi dell’account né rende l’integrazione una Cloud API ufficiale. Di default l’AI risponde solo a chat con messaggi ricevuti; lo staff può scrivere manualmente. Nessuna funzione di “fake reply” viene utilizzata.
+
+## Migliorie UX e accessibilità
+
+Per interventi, preferenze delle animazioni, verifiche e collaudo prima del rilascio, consulta [la nota UX](docs/ux-accessibilita.md).
+
+La revisione successiva introduce [interfacce dedicate per gli inserimenti](docs/inserimenti-dedicati.md), senza checkbox native o scelte implicite nei nuovi moduli.

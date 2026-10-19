@@ -2,7 +2,6 @@ import "server-only";
 
 import type { MessageAuthor } from "@/lib/agent/types";
 import { serviceClient } from "@/lib/db/clients";
-import { loadSettings } from "@/lib/db/repo";
 import { channelFor } from "@/lib/runtime";
 import type { WhatsAppProvider } from "@/lib/whatsapp/types";
 
@@ -14,15 +13,7 @@ export async function sendToChat(chatId: string, text: string, author: MessageAu
   const db = serviceClient();
   const { data: chat } = await db.from("chats").select("id, phone, last_inbound_at").eq("id", chatId).single();
   if (!chat) throw new Error("chat non trovata");
-  const { data: last } = await db
-    .from("messages")
-    .select("provider")
-    .eq("chat_id", chatId)
-    .eq("direction", "in")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const provider = (last?.provider ?? (await loadSettings(db)).whatsappProvider) as WhatsAppProvider;
+  const provider: WhatsAppProvider = "waxum";
   const channel = channelFor(provider);
   const { data: row, error } = await db
     .from("messages")
