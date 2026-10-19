@@ -67,7 +67,7 @@ Per provare anche WhatsApp in locale serve un’istanza Waxum raggiungibile dall
    ```bash
    supabase link --project-ref <ref> && supabase db push
    ```
-   Il file `seed.sql` non va applicato in produzione.
+   Il file `seed.sql` non va applicato in produzione. In *Authentication → Sign In / Providers* disattiva **Allow new users to sign up**: gli accessi li crea solo il titolare.
 2. **Primo coordinatore.** In Supabase, sotto *Authentication → Users*, crea l'utente con email e password. Poi, nell'editor SQL:
    ```sql
    insert into staff (id, full_name, role)
@@ -82,6 +82,12 @@ Per provare anche WhatsApp in locale serve un’istanza Waxum raggiungibile dall
 4. **Waxum.** Configura `WAXUM_TOKEN`, `WAXUM_JWT_SECRET`, `WAXUM_SESSION_ID`, `WAXUM_WEBHOOK_SECRET` e `WAXUM_WEBHOOK_URL` nel file `.env`. Usa segreti distinti generati con `openssl rand -hex 32`. Nel Compose è inclusa l’istanza `fdciabdul/waxum:0.16.0`, con dati persistenti e senza porte pubbliche.
 5. **Collegare il numero.** Apri *Impostazioni → WhatsApp · Waxum*, premi **Collega / riconfigura webhook**, poi inquadra il QR dal telefono (*WhatsApp → Dispositivi collegati*). Il pulsante crea la sessione se manca e registra il webhook firmato. Il telefono continua a funzionare normalmente.
 6. **Collaudo.** Segui la checklist in [docs/waxum.md](docs/waxum.md). Servono un vero telefono e l’istanza self-hosted: i test automatici simulano le API, non la rete WhatsApp.
+
+### Sicurezza
+
+- Ogni tabella ha Row Level Security: anonimi e utenti registrati che non fanno parte dello staff non vedono né modificano nulla. Il titolare gestisce lo staff, i coordinatori no. Il registro delle operazioni non si può modificare né cancellare. I test in `supabase/tests` lo verificano a ogni modifica.
+- La chiave `SUPABASE_SERVICE_ROLE_KEY` resta solo sul server: la usano webhook, assistente e motore, mai il browser.
+- Il webhook della Cloud API verifica la firma di Meta; gateway e motore accettano solo richieste con il loro token e non sono esposti su internet nel `docker-compose`.
 
 ### Costi AI
 

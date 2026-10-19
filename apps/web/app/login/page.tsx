@@ -13,7 +13,8 @@ async function login(formData: FormData) {
   });
   if (error) redirect("/login?errore=credenziali");
   const next = String(formData.get("next") ?? "/");
-  redirect(next.startsWith("/") && !next.startsWith("//") ? next : "/");
+  // solo percorsi interni: niente "//host" o "/\host", che il browser tratta come altri siti
+  redirect(/^\/(?![/\\])/.test(next) ? next : "/");
 }
 
 const ERRORS: Record<string, string> = {
