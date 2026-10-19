@@ -1,7 +1,8 @@
 import "server-only";
 
 import { audit } from "@/lib/db/actions";
-import { must, type Db } from "@/lib/db/util";
+import type { Json } from "@/lib/db/types";
+import { asJson, must, type Db } from "@/lib/db/util";
 import { monthEnd, monthStart, todayRome, type DateStr } from "@/lib/domain/time";
 
 import type { EngineProblem, EngineSolution } from "./engine-types";
@@ -83,7 +84,7 @@ export async function startPlanningRun(db: Db, month: DateStr, staffId: string |
   const run = must(
     await db
       .from("planning_runs")
-      .insert({ month: monthStart(month), status: "bozza", problem, created_by: staffId })
+      .insert({ month: monthStart(month), status: "bozza", problem: problem as unknown as Json, created_by: staffId })
       .select("id")
       .single(),
     "piano",
@@ -95,7 +96,7 @@ export async function solvePlanningRun(db: Db, runId: string): Promise<void> {
   const run = must(await db.from("planning_runs").select("problem").eq("id", runId).single(), "piano") as { problem: EngineProblem };
   try {
     const solution = await callEngine(run.problem);
-    must(await db.from("planning_runs").update({ solution }).eq("id", runId), "salvataggio piano");
+    must(await db.from("planning_runs").update({ solution: solution as unknown as Json }).eq("id", runId), "salvataggio piano");
   } catch (e) {
     await db.from("planning_runs").update({ status: "errore", error: String(e).slice(0, 1000) }).eq("id", runId);
   }
@@ -144,7 +145,7 @@ export async function confirmPlanningRun(db: Db, runId: string, staffId: string 
             mode: o.mode,
             duration_changed: o.duration_changed,
             relocated: o.relocated,
-            violations: o.violations,
+            violations: asJson(o.violations),
           })),
         )
         .select("id"),

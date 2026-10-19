@@ -14,7 +14,8 @@ import type {
 } from "@/lib/agent/types";
 
 import { applyAction } from "./actions";
-import { must, type Db } from "./util";
+import type { Json, TablesUpdate } from "./types";
+import { asJson, must, type Db } from "./util";
 
 export async function loadSettings(db: Db): Promise<Settings & Record<string, unknown>> {
   const rows = must(await db.from("settings").select("key, value"), "impostazioni") as { key: string; value: unknown }[];
@@ -71,7 +72,7 @@ export class SupabaseRepo implements AgentRepo {
   }
 
   async updateChat(id: string, patch: Partial<Chat>) {
-    must(await this.db.from("chats").update(patch).eq("id", id), "aggiornamento chat");
+    must(await this.db.from("chats").update(patch as TablesUpdate<"chats">).eq("id", id), "aggiornamento chat");
   }
 
   async getMessage(id: string) {
@@ -120,7 +121,7 @@ export class SupabaseRepo implements AgentRepo {
   }
 
   async updateMessage(id: string, patch: { status?: string; providerMessageId?: string | null; error?: string | null; transcript?: string }) {
-    const row: Record<string, unknown> = {};
+    const row: TablesUpdate<"messages"> = {};
     if (patch.status) row.status = patch.status;
     if (patch.providerMessageId !== undefined) row.provider_message_id = patch.providerMessageId;
     if (patch.error !== undefined) row.error = patch.error;
@@ -216,7 +217,7 @@ export class SupabaseRepo implements AgentRepo {
       cost_micro_usd: e.costMicroUsd,
       intent: e.intent,
       confidence: e.confidence,
-      output: e.output,
+      output: e.output as Json,
     });
   }
 
@@ -227,7 +228,7 @@ export class SupabaseRepo implements AgentRepo {
         .insert({
           chat_id: p.chatId,
           kind: p.kind,
-          payload: p.payload,
+          payload: asJson(p.payload),
           summary: p.summary,
           reason: p.reason,
           source_message_id: p.sourceMessageId,

@@ -3,11 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import type { Action } from "@/lib/agent/types";
-import { requireStaff } from "@/lib/auth/staff";
-import { applyAction } from "@/lib/db/actions";
-import { sessionClient } from "@/lib/db/clients";
-import { parseHhmm } from "@/lib/domain/time";
+import { action, ActionError, ok, okRow } from "@/lib/actions/safe";
 import { sendToChat } from "@/lib/chat/send";
+import { applyAction } from "@/lib/db/actions";
+import { decisionSchema } from "@/lib/schemas/approvals";
 
 const ACTION_KINDS = new Set([
   "aggiungi_vincolo",
@@ -20,47 +19,58 @@ const ACTION_KINDS = new Set([
   "modifica_lezioni",
 ]);
 
-export async function decidePendingAction(formData: FormData) {
-  const staff = await requireStaff();
-  const db = await sessionClient();
-  const id = String(formData.get("id"));
-  const decision = String(formData.get("decision"));
-  const notify = String(formData.get("notify") ?? "").trim();
+/**
+ * Decide su un'azione proposta dall'assistente. Restituisce lo stato finale
+ * e se il messaggio di avviso è stato mandato.
+ */
+export const decidePendingAction = action(decisionSchema, async (input, { db, staff }) => {
+  const pa = okRow(await db.from("pending_actions").select("*").eq("id", input.id).single(), "lettura proposta");
+  if (pa.status !== "in_attesa") throw new ActionError("Questa proposta è già stata decisa.");
+  const payload = pa.payload as unknown as Action;
 
-  const { data: pa } = await db.from("pending_actions").select("*").eq("id", id).single();
-  if (!pa || pa.status !== "in_attesa") return;
-
-  let status = "rifiutata";
+  let status: "applicata" | "rifiutata" | "errore" = "rifiutata";
   let error: string | null = null;
   try {
-    if (decision === "approva" && ACTION_KINDS.has(pa.kind)) {
-      const action = { ...(pa.payload as Action) } as Action;
-      if (action.type === "sposta_lezione") {
-        const date = String(formData.get("date") ?? "");
-        const time = parseHhmm(String(formData.get("time") ?? ""));
-        if (date) action.date = date;
-        if (time !== null) action.startMin = time;
+    if (input.decision === "approva") {
+      if (!ACTION_KINDS.has(pa.kind)) throw new Error("tipo di proposta non applicabile automaticamente");
+      const act = { ...payload } as Action;
+      if (act.type === "sposta_lezione") {
+        if (input.date) act.date = input.date;
+        if (input.startMin != null) act.startMin = input.startMin;
       }
-      await applyAction(db, action, staff.userId);
+      await applyAction(db, act, staff.userId);
       status = "applicata";
-    } else if (decision === "senza_compenso" && (pa.payload as Action).type === "annulla_lezione") {
-      const lessonId = (pa.payload as Extract<Action, { type: "annulla_lezione" }>).lessonId;
-      const res = await db.from("lessons").update({ status: "annullata_senza_compenso" }).eq("id", lessonId);
-      if (res.error) throw new Error(res.error.message);
+    } else if (input.decision === "senza_compenso") {
+      if (payload.type !== "annulla_lezione") throw new Error("solo per gli annullamenti");
+      ok(await db.from("lessons").update({ status: "annullata_senza_compenso" }).eq("id", payload.lessonId), "annullamento senza compenso");
       status = "applicata";
-    } else if (decision === "fatto") {
+    } else if (input.decision === "fatto") {
       status = "applicata";
     }
   } catch (e) {
     status = "errore";
-    error = String(e).slice(0, 300);
+    error = (e instanceof Error ? e.message : String(e)).slice(0, 300);
   }
-  await db
-    .from("pending_actions")
-    .update({ status, decided_by: staff.userId, decided_at: new Date().toISOString(), reason: error ? `${pa.reason} — ${error}` : pa.reason })
-    .eq("id", id);
-  if (notify && pa.chat_id && status === "applicata") {
-    await sendToChat(pa.chat_id, notify, "coordinatore").catch(() => undefined);
+  ok(
+    await db
+      .from("pending_actions")
+      .update({
+        status,
+        decided_by: staff.userId,
+        decided_at: new Date().toISOString(),
+        reason: error ? `${pa.reason} — ${error}` : pa.reason,
+      })
+      .eq("id", input.id),
+    "salvataggio decisione",
+  );
+  let notified = false;
+  if (input.notify && pa.chat_id && status === "applicata") {
+    notified = await sendToChat(pa.chat_id, input.notify, "coordinatore").then(
+      () => true,
+      () => false,
+    );
   }
-  revalidatePath("/");
-}
+  revalidatePath("/", "layout");
+  if (status === "errore") throw new ActionError(`Non è stato possibile applicarla: ${error}`);
+  return { status, notified };
+});
