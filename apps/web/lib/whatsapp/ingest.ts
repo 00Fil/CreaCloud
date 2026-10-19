@@ -1,5 +1,6 @@
 /** Registrazione di un messaggio in arrivo: chat, collegamento alla persona, deduplica. */
 
+import type { TablesUpdate } from "@/lib/db/types";
 import { must, type Db } from "@/lib/db/util";
 
 import type { InboundMessage } from "./types";
@@ -74,7 +75,7 @@ export async function ingestInbound(
   }
   const now = new Date();
   const preview = msg.text || (msg.mediaType?.startsWith("audio") ? "🎤 Messaggio vocale" : `[${msg.mediaType ?? "allegato"}]`);
-  const patch: Record<string, unknown> = {
+  const patch: TablesUpdate<"chats"> = {
     last_message_at: now.toISOString(),
     last_message_preview: preview.slice(0, 120),
   };

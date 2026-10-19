@@ -3,10 +3,11 @@
 import type { Action } from "@/lib/agent/types";
 import { datesBetween } from "@/lib/domain/time";
 
-import { must, type Db } from "./util";
+import type { TablesUpdate } from "./types";
+import { asJson, must, type Db } from "./util";
 
 export async function audit(db: Db, actor: string, action: string, entity: string, entityId: string | null, details: unknown) {
-  await db.from("audit_log").insert({ actor, action, entity, entity_id: entityId, details });
+  await db.from("audit_log").insert({ actor, action, entity, entity_id: entityId, details: asJson(details) });
 }
 
 export async function applyAction(db: Db, action: Action, actor = "ai"): Promise<void> {
@@ -144,7 +145,7 @@ export async function applyAction(db: Db, action: Action, actor = "ai"): Promise
         if (reqs.length !== 1) throw new Error("più richieste attive: scegliere quale modificare");
         requestId = reqs[0].request_id;
       }
-      const patch: Record<string, unknown> = {};
+      const patch: TablesUpdate<"lesson_requests"> = {};
       if (action.sessionsPerWeek) patch.sessions_per_week = action.sessionsPerWeek;
       if (action.durationMin) patch.duration_min = action.durationMin;
       if (action.note) patch.notes = action.note;

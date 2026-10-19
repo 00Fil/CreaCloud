@@ -94,7 +94,7 @@ function PaginationNext({
       className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
       {...props}
     >
-      <span className="hidden sm:block">Successivo</span>
+      <span className="hidden sm:block">Successiva</span>
       <ChevronRightIcon />
     </PaginationLink>
   );

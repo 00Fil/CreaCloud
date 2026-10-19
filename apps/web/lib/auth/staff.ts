@@ -8,6 +8,7 @@ import { sessionClient } from "@/lib/db/clients";
 export interface StaffSession {
   userId: string;
   name: string;
+  email: string;
   role: "titolare" | "coordinatore";
 }
 
@@ -18,5 +19,5 @@ export const requireStaff = cache(async (): Promise<StaffSession> => {
   if (!data.user) redirect("/login");
   const { data: staff } = await db.from("staff").select("full_name, role").eq("id", data.user.id).maybeSingle();
   if (!staff) redirect("/login?errore=non_abilitato");
-  return { userId: data.user.id, name: staff.full_name as string, role: staff.role as StaffSession["role"] };
+  return { userId: data.user.id, email: data.user.email ?? "", name: staff.full_name as string, role: staff.role as StaffSession["role"] };
 });

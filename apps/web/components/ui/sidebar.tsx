@@ -31,6 +31,15 @@ const SIDEBAR_WIDTH = "16rem";
 const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
+const SIDEBAR_TOGGLE_LABEL = "Mostra/nascondi menu";
+
+/** Legge lo stato salvato nel cookie `sidebar_state` (solo lato client). */
+function readSidebarCookie(): boolean | undefined {
+  const match = document.cookie.match(
+    new RegExp(`(?:^|;\\s*)${SIDEBAR_COOKIE_NAME}=(true|false)(?:;|$)`),
+  );
+  return match ? match[1] === "true" : undefined;
+}
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
@@ -53,8 +62,17 @@ function useSidebar() {
   return context;
 }
 
+/**
+ * Lo stato aperto/chiuso è salvato nel cookie `sidebar_state`. Per evitare
+ * uno scatto al caricamento, il layout server dovrebbe leggerlo e passarlo:
+ *
+ *   const defaultOpen = (await cookies()).get("sidebar_state")?.value !== "false";
+ *   <SidebarProvider defaultOpen={defaultOpen}>…</SidebarProvider>
+ *
+ * Senza `defaultOpen` il provider legge il cookie dopo il mount.
+ */
 function SidebarProvider({
-  defaultOpen = true,
+  defaultOpen,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -70,8 +88,17 @@ function SidebarProvider({
   const [openMobile, setOpenMobile] = React.useState(false);
 
   // Stato interno della sidebar; openProp / setOpenProp permettono il controllo dall'esterno.
-  const [_open, _setOpen] = React.useState(defaultOpen);
+  const [_open, _setOpen] = React.useState(defaultOpen ?? true);
   const open = openProp ?? _open;
+
+  // Se il server non ha passato defaultOpen, recupera lo stato dal cookie dopo
+  // l'idratazione (leggerlo durante il render causerebbe un mismatch).
+  const readCookieOnMount = defaultOpen === undefined;
+  React.useEffect(() => {
+    if (!readCookieOnMount) return;
+    const saved = readSidebarCookie();
+    if (saved !== undefined) _setOpen(saved);
+  }, [readCookieOnMount]);
   const setOpen = React.useCallback(
     (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
@@ -96,8 +123,9 @@ function SidebarProvider({
   // Scorciatoia da tastiera Ctrl/Cmd+B per aprire o chiudere la sidebar.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // `key` può mancare negli eventi sintetici (es. autofill di Chrome).
       if (
-        event.key.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
+        event.key?.toLowerCase() === SIDEBAR_KEYBOARD_SHORTCUT &&
         (event.metaKey || event.ctrlKey) &&
         !event.altKey &&
         !event.shiftKey
@@ -260,7 +288,7 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, isMobile, open, openMobile } = useSidebar();
 
   return (
     <Button
@@ -268,6 +296,7 @@ function SidebarTrigger({
       data-slot="sidebar-trigger"
       variant="ghost"
       size="icon"
+      aria-expanded={isMobile ? openMobile : open}
       className={cn("size-7", className)}
       onClick={(event) => {
         onClick?.(event);
@@ -276,7 +305,7 @@ function SidebarTrigger({
       {...props}
     >
       <PanelLeftIcon />
-      <span className="sr-only">Apri o chiudi il menu</span>
+      <span className="sr-only">{SIDEBAR_TOGGLE_LABEL}</span>
     </Button>
   );
 }
@@ -288,10 +317,10 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
     <button
       data-sidebar="rail"
       data-slot="sidebar-rail"
-      aria-label="Apri o chiudi il menu"
+      aria-label={SIDEBAR_TOGGLE_LABEL}
       tabIndex={-1}
       onClick={toggleSidebar}
-      title="Apri o chiudi il menu"
+      title={SIDEBAR_TOGGLE_LABEL}
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex",
         "in-data-[side=left]:cursor-w-resize in-data-[side=right]:cursor-e-resize",

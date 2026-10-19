@@ -1,12 +1,22 @@
-import { Card } from "@/components/ui";
+import { PageBody } from "@/components/app/page-header";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
   return (
-    <Card className="m-4 p-6" role="status" aria-live="polite">
-      <p className="font-serif text-xl">Caricamento in corso…</p>
-      <p className="mt-2 text-sm text-ink-soft">
-        Stiamo preparando i dati. Attendi un momento.
-      </p>
-    </Card>
+    <PageBody>
+      <div role="status" aria-live="polite" className="space-y-6">
+        <span className="sr-only">Caricamento in corso…</span>
+        <div className="space-y-2">
+          <Skeleton className="h-9 w-56" />
+          <Skeleton className="h-4 w-80 max-w-full" />
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+          <Skeleton className="h-28 rounded-xl" />
+        </div>
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+    </PageBody>
   );
 }

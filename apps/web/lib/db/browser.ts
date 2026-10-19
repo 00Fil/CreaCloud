@@ -3,9 +3,11 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-let client: SupabaseClient | null = null;
+import type { Database } from "./types";
 
-export function browserClient(): SupabaseClient {
-  client ??= createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+let client: SupabaseClient<Database> | null = null;
+
+export function browserClient(): SupabaseClient<Database> {
+  client ??= createBrowserClient<Database>(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
   return client;
 }
